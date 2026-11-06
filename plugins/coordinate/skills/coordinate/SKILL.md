@@ -36,7 +36,8 @@ paths.
 Run these first, before reading the handoff, memory or any code:
 
 1. No adapter (`/coordinate init`, or preflight says so): `python3 $S/init.py <repo>`, ask its seven
-   questions in ONE `AskUserQuestion` batch, edit the draft with the answers.
+   questions in ONE `AskUserQuestion` batch, edit the draft with the answers. On an existing adapter
+   it asks only about the keys the adapter lacks: add those with the answers.
 2. `python3 $S/preflight.py <repo>`. On FAIL, stop and give the owner the printed lines. Allow rules
    are their to add: a session cannot edit its own settings.
 3. Read the ledger's `now.md` and `decisions.md` (a one-file ledger: its Parked and Decisions

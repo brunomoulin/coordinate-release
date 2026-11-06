@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.30.2 (2026-11-06)
+
+`init.py` fixes found running `/coordinate init` on a TypeScript repo with a hand-tuned adapter.
+
+- **Type-check gates by command:** a script running `tsc`, `vue-tsc`, `svelte-check` or `astro check`
+  is a gate whatever its name (`"compile": "tsc --noEmit"` was missed). A `build` that runs `tsc`
+  stays a build; watch modes and `pre`/`post` hooks are not gates.
+- **Cheapest-first gates:** type check, lint, test, build, across packages and the Makefile.
+- **Re-run on an existing adapter** asks only the questions for keys it lacks and prints those keys
+  with the detected values. Keys set differently from the draft are listed once as kept. Nothing
+  missing prints `adapter up to date`. The task file it creates follows the adapter's own tracker.
+
 ## 2.30.1 (2026-11-06)
 
 No project names or client details in the public tree.

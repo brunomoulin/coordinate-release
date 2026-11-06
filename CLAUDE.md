@@ -15,6 +15,7 @@ reviews and gates every merge. `README.md` has the overview.
   merged with `--no-ff` (see `AGENTS.md` § Parallel Agents)
 - **Task tracking**: `ROADMAP.md`
 - **Tests**: `python3 -m unittest discover tests` before every merge
+- **Public release**: `publish/README.md` (working repo only; the public tree has no `publish/`)
 - **Library APIs**: verify against current docs or `--help`, not training data alone
 - **New specs** → `documentation/active/`; completed → `documentation/completed/`
 
