@@ -1,0 +1,7 @@
+{
+  "name": "coordinate",
+  "version": "2.30.1",
+  "description": "Coordinate a release: delegate tasks to Devin CLI and Claude subagents, route by the weekly budget, gate every merge.",
+  "author": {"name": "Moulin Intelligence"},
+  "license": "MIT"
+}

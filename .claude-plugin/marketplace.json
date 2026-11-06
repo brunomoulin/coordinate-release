@@ -1,0 +1,17 @@
+{
+  "name": "coordinate",
+  "owner": {"name": "Moulin Intelligence"},
+  "metadata": {"description": "The coordinate skill: run a release by delegating to Devin CLI and Claude subagents."},
+  "plugins": [
+    {
+      "name": "coordinate",
+      "source": "./plugins/coordinate",
+      "description": "Run a software release as a coordinator: Devin CLI and Claude subagents implement in parallel worktrees; the coordinator plans, routes by budget, verifies, reviews and merges."
+    },
+    {
+      "name": "coordinator-status",
+      "source": "./plugins/coordinator-status",
+      "description": "Optional status-line mod: context and 5-hour window, a pane of running Devin work and worktrees. Writes the usage.json the budget posture reads."
+    }
+  ]
+}

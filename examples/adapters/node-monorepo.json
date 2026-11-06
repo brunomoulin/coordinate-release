@@ -1,0 +1,18 @@
+{
+  "env_files": ["server/.env"],
+  "worktree_setup": ["npm ci"],
+  "gates": [
+    {"name": "server test", "dir": "server", "cmd": "npm test"},
+    {"name": "web test", "dir": "web", "cmd": "npm test"},
+    {"name": "build", "dir": ".", "cmd": "npm run build"},
+    {"name": "lint", "dir": ".", "cmd": "npm run lint"}
+  ],
+  "gate_grep": "Test Files|Tests |problems|error TS|built in|FAIL",
+  "test_slots": 1,
+  "concurrency": {"devin": 2, "sonnet": 2, "opus_review": 1},
+  "db_test": null,
+  "append_only": ["CHANGELOG.md"],
+  "handoff": null,
+  "repo_rules": "AGENTS.md",
+  "closeout_skill": null
+}

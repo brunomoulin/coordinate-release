@@ -1,0 +1,35 @@
+{
+  "main_branch": "main",
+  "worktree_parent": "..",
+  "env_files": ["backend/.env"],
+  "worktree_setup": ["npm ci"],
+  "gates": [
+    {"name": "backend test (3 zones)", "dir": "backend", "cmd": "npm test"},
+    {"name": "frontend test (3 zones)", "dir": "frontend", "cmd": "npm test"},
+    {"name": "backend build", "dir": "backend", "cmd": "npm run build"},
+    {"name": "frontend build", "dir": "frontend", "cmd": "npm run build"},
+    {"name": "backend lint", "dir": "backend", "cmd": "npm run lint"},
+    {"name": "frontend lint", "dir": "frontend", "cmd": "npm run lint"}
+  ],
+  "gate_grep": "Test Files|Tests  |✖|problems|error TS|built in|FAIL",
+  "test_slots": 1,
+  "concurrency": {"devin": 3, "sonnet": 2, "opus_review": 1},
+  "db_test": {"dir": "backend", "cmd": "npm run test:db"},
+  "db_snapshot": "node scripts/dbcheck.js",
+  "append_only": [
+    "documentation/agent-handoff.md",
+    "backend/src/config/constants.ts",
+    "documentation/guides/prod-migration.md"
+  ],
+  "handoff": "documentation/agent-handoff.md",
+  "taskmaster": ".taskmaster/tasks/tasks.json",
+  "change_docs": "documentation/active",
+  "dev_ports": [3001, 5174],
+  "closeout_skill": "release-closeout",
+  "repo_rules": "AGENTS.md",
+  "ledger_archive": "documentation/releases/{release}-ledger.md",
+  "devin": {
+    "model": "swe-2-high",
+    "fusion_model": "fusion-claude-opus-5-5-high-sidekick-swe-2-medium"
+  }
+}
