@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.32.0 (2026-11-07)
+
+- **The status pane opens by itself (mod 0.10.0)** the first time a coordinator starts in a
+  session: a prompt that starts with the skill's own phrases (`coordinate <R>`, `/coordinate`,
+  "resume coordinator", "pilot coordinator", "coordinator on <R>") or the main session loading
+  the skill. Only in a repo with an adapter, once a session: closed after that, it stays closed
+  until `/coord-status`. A subagent loading the skill does not open it.
+- **README:** what it does in one paragraph, install and update steps, a quick start, a table of
+  modes and commands (watched, away, resume, wake, `/coord-status`), and what the pane shows.
+- `publish/README.md` (private): the routine is now fix here, publish, update the public install.
+
 ## 2.31.0 (2026-11-07)
 
 The coordinator's auto mode is now **away mode**, so it is not mistaken for Claude Code's auto

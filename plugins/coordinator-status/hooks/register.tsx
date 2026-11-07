@@ -43,6 +43,8 @@ let refreshing = false
 let warnedContext = false
 let warnedWindow = false
 let timers: { cancel: () => void }[] = []
+// The pane opens by itself once a session, when a coordinator starts (autoOpen).
+let autoOpened = false
 // This session's spend, [unix s, usd so far, 5h %]: one sample per SAMPLE_S, the last hour plus
 // the newest older one as its baseline. Read back from the file after a reload.
 let spend: { file: string; session: string; cwd: string; samples: [number, number, number | null][] } | null = null
@@ -331,6 +333,21 @@ async function closePane($: EngineInterface) {
   await $.ui.close({ id: PANE })
 }
 
+// The coordinate skill's own trigger phrases (its SKILL.md description), at the start of a prompt.
+const COORDINATE_PROMPT = /^\s*(\/coordinate(?::coordinate)?(\s|$)|coordinate\s+\S|(pilot|resume) coordinator\b|coordinator on\s+\S)/i
+
+// A coordinator starting (the person's prompt, or the skill loading) opens the pane once a
+// session, in a repo with a coordinate adapter; closed after that, it stays closed.
+async function autoOpen($: EngineInterface) {
+  if (autoOpened) return
+  autoOpened = true
+  if ((await $.ui.panes()).some(p => p.id === PANE)) return
+  await refresh($, '')
+  const r = await read($, report)
+  if (r.error.includes('No coordinate adapter')) return
+  await openPane($, r.release)
+}
+
 // The band's button: closes the pane when it is up, opens it otherwise.
 async function togglePane($: EngineInterface, release: string) {
   if ((await $.ui.panes()).some(p => p.id === PANE)) await closePane($)
@@ -488,6 +505,20 @@ export const register: Register = on => {
     }
 
     return next(e)
+  })
+
+  on('prompt.submit', async ($, e, next) => {
+    const result = await next(e)
+    if (COORDINATE_PROMPT.test(e.text)) void autoOpen($)
+
+    return result
+  })
+
+  on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
+    const result = await next(e)
+    if (!e.agentId && /^(coordinate:)?coordinate$/.test(e.skill)) void autoOpen($)
+
+    return result
   })
 
   on('command.run', { command: 'coord-status' }, async ($, e) => {

@@ -75,6 +75,8 @@ function engine(on: On, noAdapter = false) {
   on('session.measure', (_$, e) => ({ changed: e.changed }))
   on('agent.spawn', () => ({ agentId: 'a1', model: 'claude-opus-5-5' }))
   on('turn.complete', (_$, e) => ({ text: e.answer }))
+  on('prompt.submit', (_$, e) => ({ text: e.text }))
+  on('tool.call', { tool: 'Skill' }, () => ({ result: 'Launching skill: coordinate' }))
   on('tool.register', (_$, e) => ({ value: { tool: `mcp__coordinator-status__${e.name}` } }))
   // Stands for the engine's own drawing, under a band the mod leaves to it.
   on('ui.render', ($, e) => {
@@ -381,4 +383,43 @@ test('band: a repo with no coordinate adapter is asked once a session, and shows
   expect(seen.statusRuns).toBe(1)
   const band = await $.ui.mount(BAND_AT)
   expect(await band.find({ text: /engine/ })).toBeDefined()
+})
+
+// The pane opens by itself when a coordinator starts: once a session, only where an adapter is.
+// autoOpen runs beside the prompt, not in its way: let its status.py run land.
+declare const setTimeout: (f: () => void, ms: number) => unknown
+const settle = async () => { for (let i = 0; i < 20; i++) await new Promise<void>(r => setTimeout(r, 0)) }
+
+test('auto-open: "coordinate 1.1" opens the pane once; prose that mentions it does not', async ($, on) => {
+  const { seen } = engine(on)
+  await $.session.start({ cwd: '/w', surface: 'terminal', isInteractive: true } as never)
+  await $.prompt.submit({ text: 'what does the coordinate skill do?' } as never)
+  await settle()
+  expect(seen.opened).toEqual([])
+  await $.prompt.submit({ text: 'coordinate 1.1' } as never)
+  await settle()
+  expect(seen.opened).toEqual(['coordinator-status'])
+  await $.command.run({ command: 'coord-status', args: 'close' } as never)
+  await $.prompt.submit({ text: 'resume coordinator' } as never)
+  await settle()
+  expect(seen.opened).toEqual(['coordinator-status'])
+})
+
+test('auto-open: the coordinate skill loading opens the pane; a subagent loading it does not', async ($, on) => {
+  const { seen } = engine(on)
+  await $.session.start({ cwd: '/w', surface: 'terminal', isInteractive: true } as never)
+  await $.tool.call({ tool: 'Skill', skill: 'coordinate:coordinate', agentId: 'a1' } as never)
+  await settle()
+  expect(seen.opened).toEqual([])
+  await $.tool.call({ tool: 'Skill', skill: 'coordinate:coordinate' } as never)
+  await settle()
+  expect(seen.opened).toEqual(['coordinator-status'])
+})
+
+test('auto-open: no coordinate adapter, no pane', async ($, on) => {
+  const { seen } = engine(on, true)
+  await $.session.start({ cwd: '/w', surface: 'terminal', isInteractive: true } as never)
+  await $.prompt.submit({ text: '/coordinate 1.1' } as never)
+  await settle()
+  expect(seen.opened).toEqual([])
 })
