@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.31.0 (2026-11-07)
+
+The coordinator's auto mode is now **away mode**, so it is not mistaken for Claude Code's auto
+permission mode (a refused Agent call in one was read as a reason to leave the other).
+
+- **`/coordinate away <R>`, `ledger.py away <ledger> on|off`.** It writes `AWAY on|off` rows;
+  `now.md` says "Away mode is on" and `status.py` prints `AWAY MODE`. A ledger turned on before
+  2.31.0 (`AUTO on` rows) still reads as on. `decide --auto` and the A<n> pick ids are unchanged.
+- **Pane badge (mod 0.9.0):** `status.py --json` gives `away`, and the pane header shows
+  `· away mode` beside the release. Read-only: turning it on stays the owner's word in chat.
+- SKILL.md §Claude reviewer names the refusing mode as Claude Code's auto permission mode.
+
 ## 2.30.2 (2026-11-06)
 
 `init.py` fixes found running `/coordinate init` on a TypeScript repo with a hand-tuned adapter.

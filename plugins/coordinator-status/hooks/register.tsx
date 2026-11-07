@@ -589,6 +589,7 @@ export const register: Register = on => {
           <Box flexDirection="column">
             <Text bold color="#f5c518">
               COORDINATOR <Text dimColor>{`· release ${d?.release || r.release || '?'}`}</Text>
+              {d?.away && <Text color="#ff87ff">{' · away mode'}</Text>}
             </Text>
             <Text>
               <Text bold color="#ff5f5f">HP </Text>

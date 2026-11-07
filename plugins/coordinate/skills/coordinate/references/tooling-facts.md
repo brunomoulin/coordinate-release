@@ -5,7 +5,7 @@ hand.
 
 ## Claude Code
 
-- Auto mode's classifier reads context. After `/clear`, it no longer sees why Devin launches are
+- Auto mode's classifier (Claude Code's permission mode, not the coordinator's away mode) reads context. After `/clear`, it no longer sees why Devin launches are
   allowed, so the allow rules `Bash(devin -p *)` and `Bash(devin list *)` must be in settings.
   A session cannot add them itself (refused as self-modification): the owner adds them.
 - `/clear` keeps background shells running, and each one that ends starts a turn in the cleared

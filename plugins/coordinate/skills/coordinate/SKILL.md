@@ -1,6 +1,6 @@
 ---
 name: coordinate
-description: Use when the user says "pilot coordinator", "coordinate <release>", "resume coordinator", "coordinator on <release>", "/coordinate init", "/coordinate auto <release>", or asks for a release to be run by delegating tasks to Devin CLI or Claude subagents rather than implemented in this session; also when resuming such a release after /clear, a compaction or a Claude usage limit.
+description: Use when the user says "pilot coordinator", "coordinate <release>", "resume coordinator", "coordinator on <release>", "/coordinate init", "/coordinate away <release>", or asks for a release to be run by delegating tasks to Devin CLI or Claude subagents rather than implemented in this session; also when resuming such a release after /clear, a compaction or a Claude usage limit.
 ---
 
 # Coordinate a Release
@@ -46,8 +46,8 @@ Run these first, before reading the handoff, memory or any code:
    Nothing else from the ledger. On a resume, `python3 $S/ledger.py questions <ledger>` gives the
    parked questions as data (the "Waiting for you" holds among them): open `AskUserQuestion` with
    them directly. When `now.md` opens with "Decided for you", ask the owner in the same batch which
-   picks they override (one multiSelect question), then `ledger.py review` each (§1 Auto mode).
-   "Auto mode is on" there means you stay in it.
+   picks they override (one multiSelect question), then `ledger.py review` each (§1 Away mode).
+   "Away mode is on" there means you stay in it.
    `status.py` (step 4) prints `WAKE SESSION RUNNING` when a woken background session is still
    coordinating this release: do not start working beside it. Tell the owner, and wait for its park or
    `claude stop <id>` it on their say. `WAKE ARMED` means the old session's wake has not fired yet:
@@ -74,9 +74,10 @@ Run these first, before reading the handoff, memory or any code:
   `budget.py answer <claude|devin> "<answer>"`: it holds until the weekly reset, so the question
   is asked once per week per signal, never per task.
 
-**Auto mode** (`/coordinate auto <R>`, or "coordinate <R> --auto"; the owner asleep or away). First
-`python3 $S/ledger.py auto <ledger> on`: the rule as their decision row, and `now.md` says so until
-`auto <ledger> off`, so a resumed or woken session stays in it. Then, when a choice comes up:
+**Away mode** (`/coordinate away <R>`, or "coordinate <R> --away"; the owner asleep or away; called
+auto mode before 2.31.0, renamed so it is not mistaken for Claude Code's auto permission mode). First
+`python3 $S/ledger.py away <ledger> on`: the rule as their decision row, and `now.md` says so until
+`away <ledger> off`, so a resumed or woken session stays in it. Then, when a choice comes up:
 
 - **Hold it for the owner** when it touches schema or migrations (`--hold schema`), CI or deploy
   (`deploy`), security policy (`security`), product direction, a feature-sized choice
@@ -89,7 +90,7 @@ Run these first, before reading the handoff, memory or any code:
   [--task T] --alt "<the options it beat>" --revert "<what undoing it costs>" "<the pick>"`, and
   keep going. That night's 6 picks were sound; one (468) the coordinator reversed itself after a
   review, which is the system working.
-- Auto mode changes who decides, nothing else: budget gates, fit checks, the hold on merges with
+- Away mode changes who decides, nothing else: budget gates, fit checks, the hold on merges with
   open DB questions, reviews and eyeball checks all apply as in a watched session.
 
 Each park puts **Decided for you** (one line per unreviewed pick, with its revert cost) and
@@ -160,7 +161,7 @@ pick stays in `decisions.md` after its task merges. `ledger.py decisions <ledger
      OUTCOME row sums Claude tokens and ≈$ by that first word. With the
      coordinator-status mod loaded, add: "Report your plan and each finished step with the `step`
      tool", so the pane shows its progress.
-   - **Claude reviewer when `Agent` is refused** (auto mode: a hook that rewrites Agent prompts,
+   - **Claude reviewer when `Agent` is refused** (Claude Code's auto permission mode: a hook that rewrites Agent prompts,
      such as context-mode's, makes the classifier refuse every call):
      `python3 $S/claude_review.py <repo> --release R [--model sonnet|opus] <task>=<review brief>`
      with `run_in_background: true`. It runs `claude -p` in the worktree with read-only tools
@@ -326,7 +327,7 @@ with Monitor while one still runs. Armed, it detaches, sleeps past the reset, th
 fresh background session, `claude --bg -n "wake R" "resume coordinator on R"`, that reads
 `now.md` at 0 context (log: `<log_dir>/wake-R.log`). The owner sees it in the Claude app (a `-p`
 session never showed there). Woken, end with a normal park whose first lines are "For you"
-(under 10: what waits on them, what merged, what still runs; `park` puts the auto mode lists above
+(under 10: what waits on them, what merged, what still runs; `park` puts the away mode lists above
 them), send `now.md` with SendUserFile, then a PushNotification that leads with what waits on
 them ("2 decided for you, 1 waiting"). The park is the summary: there is no
 second file (the owner, 2026-10-26). It skips while your session is still open

@@ -10,7 +10,7 @@
   ledger.py decide    <ledger> --waits [--task T] --options "a | b" --rec "<pick> (why)"
                       --hold schema|deploy|security|product|prod|cost "<the question>"
                       (held for the owner, id W<n>; it is a parked question until they answer)
-  ledger.py auto      <ledger> on|off                 the owner's auto mode (/coordinate auto R)
+  ledger.py away      <ledger> on|off                 the owner's away mode (/coordinate away R)
   ledger.py review    <ledger> A<n> ok | A<n> override --revert "<cost>" "<their decision>"
                       | W<n> --revert "<cost>" "<their choice>"
   ledger.py decisions <ledger> [--auto|--waits] [--unreviewed]   the A/W lines
@@ -263,7 +263,7 @@ def retire(f, task):
         print(f'{len(done)} decision{"s" * (len(done) != 1)} on {task} moved to history.md')
 
 
-# Auto mode (the owner, 2026-10-26 00:38, asleep: "pick your recommendation, record why and the
+# Away mode, auto mode until 2.31.0 (the owner, 2026-10-26 00:38, asleep: "pick your recommendation, record why and the
 # alternatives, keep going; wait for me where undoing it later costs too much"). That night's 6
 # picks were sound; the gap was finding them in a 118 KB ledger. So each pick (A<n>) and each hold
 # (W<n>) is a decisions.md line with an id, and now.md opens with both lists until they review them.
@@ -286,29 +286,29 @@ NOW_AUTO = re.compile(r'<!-- auto -->.*?<!-- /auto -->\n*', re.S)
 
 def need_folder(f):
     if not folder(f):
-        sys.exit('auto mode needs a release folder (2.12.0 on): ledger.py init .coordinate/releases/<R> <R>')
+        sys.exit('away mode needs a release folder (2.12.0 on): ledger.py init .coordinate/releases/<R> <R>')
 
 
-def auto_on(f):
-    """(on, since) from the latest AUTO row."""
+def away_on(f):
+    """(on, since) from the latest AWAY row (AUTO before 2.31.0)."""
     on, since = False, None
     for t, _, _, ev in rows(f):
-        m = re.match(r'AUTO (on|off)\b', ev.strip())
+        m = re.match(r'(?:AWAY|AUTO) (on|off)\b', ev.strip())
         if m:
             on, since = m.group(1) == 'on', t
     return on, since
 
 
-def set_auto(f, on):
-    """The owner's `/coordinate auto R`: the rule written once, kept in now.md so a resumed or woken
-    session stays in auto mode."""
+def set_away(f, on):
+    """The owner's `/coordinate away R`: the rule written once, kept in now.md so a resumed or woken
+    session stays in away mode."""
     need_folder(f)
-    add(f, '-', 'owner', f'AUTO {"on" if on else "off"}')
+    add(f, '-', 'owner', f'AWAY {"on" if on else "off"}')
     if on:
-        decide(f, 'auto mode on: the coordinator picks its recommendation where undoing it later is '
+        decide(f, 'away mode on: the coordinator picks its recommendation where undoing it later is '
                   'cheap and records each pick (decide --auto); what the hold rule names waits for '
-                  'The owner (decide --waits, SKILL.md §Auto mode)',
-               'a watched session: every choice waits for the owner', 'ledger.py auto <ledger> off', by='owner')
+                  'the owner (decide --waits, SKILL.md §Away mode)',
+               'a watched session: every choice waits for the owner', 'ledger.py away <ledger> off', by='owner')
     refresh_now(f)
 
 
@@ -343,14 +343,14 @@ def wait(f, question, options, rec, hold, task=None):
 
 
 def auto_block(f):
-    """The top of now.md while auto mode is on or anything waits on the owner's review."""
-    on, since = auto_on(f)
+    """The top of now.md while away mode is on or anything waits on the owner's review."""
+    on, since = away_on(f)
     picks, waits = items(f, 'auto', True), items(f, 'waits', True)
     if not (on or picks or waits):
         return ''
     out = ['<!-- auto -->']
     if on:
-        out.append(f'**Auto mode is on** (since {since}): pick and record; hold what SKILL.md §Auto mode '
+        out.append(f'**Away mode is on** (since {since}): pick and record; hold what SKILL.md §Away mode '
                    'holds. A resumed or woken session stays in it.\n')
     if picks:
         out.append(f'## Decided for you ({len(picks)})\n')
@@ -568,8 +568,8 @@ if __name__ == '__main__':
         if not (alt and revert and rest):
             sys.exit('decide needs --alt "<the other options>", --revert "<what undoing it costs>" and the decision')
         decide(f, ' '.join(rest), alt, revert, task, by, auto='--auto' in a)
-    elif cmd == 'auto' and len(a) == 3 and a[2] in ('on', 'off'):
-        set_auto(f, a[2] == 'on')
+    elif cmd == 'away' and len(a) == 3 and a[2] in ('on', 'off'):
+        set_away(f, a[2] == 'on')
     elif cmd == 'review' and len(a) >= 4:
         rest = a[2:]
         revert = opt(rest, '--revert')

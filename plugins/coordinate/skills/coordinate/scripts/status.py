@@ -221,6 +221,13 @@ def over_caps(a, release):
     return out
 
 
+def away(a, release):
+    """The pane's away badge: the owner's away mode (SKILL.md §1) is on in this release folder."""
+    import ledger as lg
+    lf = ad.ledger_file(a, release) if release else None
+    return bool(lf and ad.in_folder(a, release) and os.path.exists(lf) and lg.away_on(lf)[0])
+
+
 def as_json(a, main_, release):
     """The same picture as data, for the command-center mod's pane."""
     import budget, checks as ck, ledger as lg
@@ -256,7 +263,7 @@ def as_json(a, main_, release):
             'tasks': tasks, 'limits': a['session_limits'], 'concurrency': a['concurrency'],
             'test_slots': [{'slot': n, 'holder': h} for n, h in holders],
             'test_waiting': test_waiting(holders), 'db': db_run(a), 'checks': open_checks,
-            'posture': b['posture'], 'budget_line': b['line']}
+            'posture': b['posture'], 'budget_line': b['line'], 'away': away(a, release)}
 
 
 def main():
@@ -321,10 +328,10 @@ def main():
             subprocess.run([sys.executable, os.path.join(HERE, 'ledger.py'), 'state', lf])
             if ad.in_folder(a, release):
                 import ledger as lg
-                on, since = lg.auto_on(lf)
+                on, since = lg.away_on(lf)
                 picks, waits = len(lg.items(lf, 'auto', True)), len(lg.items(lf, 'waits', True))
                 if on or picks or waits:
-                    print(f'AUTO MODE {"on since " + since if on else "off"} · {picks} decided for the owner to '
+                    print(f'AWAY MODE {"on since " + since if on else "off"} · {picks} decided for the owner to '
                           f'review · {waits} waiting for them (now.md lists them)')
         else:
             print('no ledger yet')

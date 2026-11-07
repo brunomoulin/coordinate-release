@@ -35,6 +35,8 @@ export type StatusData = {
   db?: { holder: string | null; waiting: number } | null
   checks?: Check[]
   posture?: string
+  // The owner's away mode (ledger.py away on), from coordinate 2.31.0.
+  away?: boolean
 }
 export type StatusReport = { release: string; data: StatusData | null; error: string; at: number }
 export type Budget = { tokens: number; window: number | null }

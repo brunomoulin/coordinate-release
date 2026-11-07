@@ -5,7 +5,7 @@ Where coordinate stands and what comes next. What shipped, release by release, i
 
 ## Where we are
 
-- **Skill 2.30.2, mod `coordinator-status` 0.8.0.** The skill has run several real releases end to
+- **Skill 2.31.0, mod `coordinator-status` 0.9.0.** The skill has run several real releases end to
   end: planning waves, Devin and Claude implementers in worktrees, scripted verification, routed
   reviews, gated merges, close-out. Python 3.10+ standard library only; no server.
 - The mod is optional. Without it, `budget.py` treats the 5-hour and 7-day signals as unknown.

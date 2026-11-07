@@ -35,6 +35,7 @@ const STATUS = {
     { id: 3, task: '342', where: 'localhost:3000', what: 'the error toast' },
   ],
   posture: 'NORMAL',
+  away: true,
 }
 
 // `noAdapter`: status.py runs in a repo the coordinate skill was never set up in.
@@ -200,6 +201,7 @@ test('pane: /coord-status draws the party, the map and the quest log; a second r
   })
   expect(await pane.find({ text: /COORDINATOR/ })).toBeDefined()
   expect(await pane.find({ text: /release 2\.6\.2/ })).toBeDefined()
+  expect(await pane.find({ text: / · away mode/ })).toBeDefined()
   expect(await pane.find({ text: /DEVIN/ })).toBeDefined()
   expect(await pane.find({ text: /ctx 155k\/650k/ })).toBeDefined()
   expect(await pane.find({ text: /5h 20% used/ })).toBeDefined()
@@ -225,6 +227,7 @@ test('pane: no release given follows the newest ledger; slots, Devin model and c
     props: {} as never, requestId: 'coordinator-status', viewport: { columns: 70, rows: 40 } as never,
   })
   expect(await pane.find({ text: /release 2\.6\.2/ })).toBeDefined()
+  expect(await pane.find({ text: / · away mode/ })).toBeDefined()
   expect(await pane.find({ text: /devin 1\/3 free/ })).toBeDefined()
   expect(await pane.find({ text: /tests 0\/1 free/ })).toBeDefined()
   expect(await pane.find({ text: /2 queued/ })).toBeDefined()
