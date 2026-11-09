@@ -74,5 +74,11 @@ declare module 'claude-code' {
       // `quest-342`) and MAP rows unfolded into their files (`tree-app-342`).
       expanded: string[]
     }
+    // Read only: the skins mod's own values (hellosverre/claude-skins), as far as the pane
+    // follows them. Undefined when skins is not installed.
+    skins: {
+      prefs: { skin: string }
+      custom: Record<string, { base: string; palette: Partial<Record<string, string>> }>
+    }
   }
 }

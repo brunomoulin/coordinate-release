@@ -72,6 +72,9 @@ It shows:
 It also writes the 5-hour and 7-day usage the budget posture reads; without the mod those signals
 are unknown and the coordinator asks once a week.
 
+With the [skins](https://github.com/hellosverre/claude-skins) mod on a skin you made (`/skin`), the
+pane's status and highlight colours follow it; built-in skins keep the pane's own colours for now.
+
 ## What is in it
 
 - `plugins/coordinate/skills/coordinate/SKILL.md`: the procedure.

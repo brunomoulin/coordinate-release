@@ -55,13 +55,53 @@ let agentLog: { file: string; session: string; cwd: string; agents: AgentRecord[
 const k = (n: number) => `${Math.round(n / 1000)}k`
 const big = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : k(n))
 
+// The pane's working colours. With the skins mod (hellosverre/claude-skins) on a skin made with
+// /skin or its designer, they follow that skin's slots; the brand colours (coordinator gold,
+// Claude orange, Devin teal, the sprites) stay. Skins keeps its built-in palettes in its code,
+// not its state, so a built-in skin, a slot the made skin leaves to its base, or no skins mod
+// at all keeps these defaults (ROADMAP: skins palette request).
+export const DEFAULT_COLORS = {
+  ok: '#5fd75f', warn: '#ffd75f', err: '#ff5f5f', muted: '#8a8a8a', fg: '#d0d0d0',
+  info: '#5fd7ff', accent: '#5fafff', alert: '#ff875f', you: '#ff87ff',
+}
+export type Colors = typeof DEFAULT_COLORS
+const SKIN_SLOT: Record<keyof Colors, string> = {
+  ok: 'ok', warn: 'warn', err: 'err', muted: 'muted', fg: 'fg',
+  info: 'read', accent: 'user', alert: 'write', you: 'web',
+}
+const HEX = /^#[0-9a-fA-F]{6}$/
+let C: Colors = DEFAULT_COLORS
+
+export function skinColors(skin: unknown, custom: unknown): Colors {
+  if (typeof skin !== 'string' || !custom || typeof custom !== 'object') return DEFAULT_COLORS
+  const palette = (custom as Record<string, { palette?: Record<string, unknown> }>)[skin]?.palette
+  if (!palette || typeof palette !== 'object') return DEFAULT_COLORS
+  const out = { ...DEFAULT_COLORS }
+  for (const key of Object.keys(SKIN_SLOT) as (keyof Colors)[]) {
+    const hex = palette[SKIN_SLOT[key]]
+    if (typeof hex === 'string' && HEX.test(hex)) out[key] = hex
+  }
+  return out
+}
+
+// Read while a render draws, so a skin change draws the pane again.
+async function followSkin($: EngineInterface): Promise<void> {
+  try {
+    const prefs = (await $.state.get({ plugin: 'skins', key: 'prefs' })).value
+    const custom = (await $.state.get({ plugin: 'skins', key: 'custom' })).value
+    C = skinColors(prefs?.skin, custom)
+  } catch {
+    C = DEFAULT_COLORS
+  }
+}
+
 function bar(ratio: number, width: number): [string, string] {
   const full = Math.round(Math.max(0, Math.min(1, ratio)) * width)
   return ['█'.repeat(full), '░'.repeat(width - full)]
 }
 
 function levelColor(ratio: number): string {
-  return ratio > 0.5 ? '#5fd75f' : ratio > 0.25 ? '#ffd75f' : '#ff5f5f'
+  return ratio > 0.5 ? C.ok : ratio > 0.25 ? C.warn : C.err
 }
 
 function hearts(ratio: number): string {
@@ -71,11 +111,11 @@ function hearts(ratio: number): string {
 
 function eventColor(event: string): string {
   if (event.startsWith('MERGED')) return '#f5c518'
-  if (/RED|BLOCKED|FAIL/.test(event)) return '#ff5f5f'
-  if (event.startsWith('PARKED')) return '#8a8a8a'
-  if (event.startsWith('LAUNCHED') || event.startsWith('REVIEW')) return '#5fd7ff'
-  if (/green|DONE/.test(event)) return '#5fd75f'
-  return '#d0d0d0'
+  if (/RED|BLOCKED|FAIL/.test(event)) return C.err
+  if (event.startsWith('PARKED')) return C.muted
+  if (event.startsWith('LAUNCHED') || event.startsWith('REVIEW')) return C.info
+  if (/green|DONE/.test(event)) return C.ok
+  return C.fg
 }
 
 function shortName(tree: Worktree, all: Worktree[]): string {
@@ -84,18 +124,19 @@ function shortName(tree: Worktree, all: Worktree[]): string {
 }
 
 function treeIcon(t: Worktree): { glyph: string; color: string; note: string; noteColor: string } {
-  if (t.main) return { glyph: '⌂', color: '#f5c518', note: 'home', noteColor: '#8a8a8a' }
-  if (t.running) return { glyph: '♣', color: '#87ff87', note: 'devin at work', noteColor: '#5fd7ff' }
-  if (t.deletable) return { glyph: '♧', color: '#6c6c6c', note: 'merged: CHOP ME', noteColor: '#ff875f' }
-  if (t.dirty) return { glyph: '♣', color: '#ffd75f', note: `+${t.ahead} · ~${t.dirty} unsaved`, noteColor: '#ffd75f' }
-  return { glyph: '♣', color: '#5faf5f', note: `+${t.ahead}`, noteColor: '#8a8a8a' }
+  if (t.main) return { glyph: '⌂', color: '#f5c518', note: 'home', noteColor: C.muted }
+  if (t.running) return { glyph: '♣', color: C.ok, note: 'devin at work', noteColor: C.info }
+  if (t.deletable) return { glyph: '♧', color: C.muted, note: 'merged: CHOP ME', noteColor: C.alert }
+  if (t.dirty) return { glyph: '♣', color: C.warn, note: `+${t.ahead} · ~${t.dirty} unsaved`, noteColor: C.warn }
+  return { glyph: '♣', color: C.ok, note: `+${t.ahead}`, noteColor: C.muted }
 }
 
 // A worktree's changed files as a tree, after Filetree (MIT, claude-code-filetree): folders
 // first, a folder whose one child is a folder folded into its path, lines summed up the folders.
 type FileNode = { name: string; file?: ChangedFile; kids: FileNode[]; add: number; del: number }
 
-const FILE_COLORS: Record<string, string> = { A: '#5fd75f', M: '#ffd75f', D: '#ff5f5f', '?': '#8a8a8a' }
+const fileColor = (status: string): string =>
+  ({ A: C.ok, M: C.warn, D: C.err, '?': C.muted } as Record<string, string>)[status] ?? C.alert
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
 const byKind = (a: FileNode, b: FileNode) => Number(!!a.file) - Number(!!b.file) || collator.compare(a.name, b.name)
 
@@ -141,9 +182,9 @@ function modelName(model: string): string {
 }
 
 function agentState(status: AgentRun['status']): { text: string; color: string } {
-  if (status === 'running') return { text: 'on a quest', color: '#5fd7ff' }
-  if (status === 'done') return { text: '✓ quest done', color: '#5fd75f' }
-  return { text: '☠ failed', color: '#ff5f5f' }
+  if (status === 'running') return { text: 'on a quest', color: C.info }
+  if (status === 'done') return { text: '✓ quest done', color: C.ok }
+  return { text: '☠ failed', color: C.err }
 }
 
 // Per-agent context, cost and time, after Savvy Progress (MIT, github.com/johnnyvizz/claude-kit).
@@ -201,9 +242,9 @@ function progressOf(a: AgentRun): number | null {
 
 // Devin's billing: SWE-2 standalone is free, Fusion and Opus spend the daily/weekly quota.
 function devinModel(run: DevinRun): { model: string; cost: string; color: string } {
-  if (run.model.startsWith('UNPINNED')) return { model: 'unpinned', cost: 'cost ?', color: '#ff875f' }
+  if (run.model.startsWith('UNPINNED')) return { model: 'unpinned', cost: 'cost ?', color: C.alert }
 
-  return run.paid ? { model: run.model, cost: 'quota', color: '#ffd75f' } : { model: run.model, cost: 'free', color: '#5fd75f' }
+  return run.paid ? { model: run.model, cost: 'quota', color: C.warn } : { model: run.model, cost: 'free', color: C.ok }
 }
 
 // A test slot file holds 'pid HH:MM:SS label'.
@@ -545,6 +586,7 @@ export const register: Register = on => {
     const els = $.ui.resolve(e)
     const { Box, Text, Button } = els
     const Raster = 'Raster' in els ? els.Raster : undefined
+    await followSkin($)
     const r = await read($, report)
     const b = await read($, budget)
     const party = await read($, runs)
@@ -586,7 +628,7 @@ export const register: Register = on => {
     const eye = (task: string) => {
       const n = eyes.get(task) ?? 0
 
-      return n === 0 ? null : <Text color="#ff87ff">{` 👁${n > 1 ? n : ''}`}</Text>
+      return n === 0 ? null : <Text color={C.you}>{` 👁${n > 1 ? n : ''}`}</Text>
     }
     const shownChecks = checks.slice(0, roomy ? 5 : 3)
     const slots = d?.test_slots ?? []
@@ -620,17 +662,17 @@ export const register: Register = on => {
           <Box flexDirection="column">
             <Text bold color="#f5c518">
               COORDINATOR <Text dimColor>{`· release ${d?.release || r.release || '?'}`}</Text>
-              {d?.away && <Text color="#ff87ff">{' · away mode'}</Text>}
+              {d?.away && <Text color={C.you}>{' · away mode'}</Text>}
             </Text>
             <Text>
-              <Text bold color="#ff5f5f">HP </Text>
+              <Text bold color={C.err}>HP </Text>
               <Text color={levelColor(hp)}>{hpFull}</Text>
               <Text dimColor>{hpEmpty}</Text>
               <Text dimColor>{` ctx ${k(b.tokens)}/${k(limit)}`}</Text>
             </Text>
             <Text>
-              <Text bold color="#5fafff">MP </Text>
-              <Text color="#5fafff">{mpFull}</Text>
+              <Text bold color={C.accent}>MP </Text>
+              <Text color={C.accent}>{mpFull}</Text>
               <Text dimColor>{mpEmpty}</Text>
               <Text dimColor>{mp === null ? ' 5h: no reading yet' : ` 5h ${b.window}% used`}</Text>
             </Text>
@@ -642,14 +684,14 @@ export const register: Register = on => {
             </Text>
           </Box>
         </Box>
-        {hp < 0.25 && <Text bold color="#ff5f5f">LOW HP: park after the current merge</Text>}
+        {hp < 0.25 && <Text bold color={C.err}>LOW HP: park after the current merge</Text>}
 
-        {checks.length > 0 && rule(`👁 WAITING ON YOU · ${checks.length} check${checks.length > 1 ? 's' : ''}`, '#ff87ff')}
+        {checks.length > 0 && rule(`👁 WAITING ON YOU · ${checks.length} check${checks.length > 1 ? 's' : ''}`, C.you)}
         {shownChecks.map(c => cut(`check-${c.id}`, wrap => (
           <Text wrap={wrap}>
             <Text dimColor>{`#${c.id} `}</Text>
             <Text bold>{`${c.task} `}</Text>
-            <Text color="#5fd7ff">{`${c.where} `}</Text>
+            <Text color={C.info}>{`${c.where} `}</Text>
             <Text>{c.what}</Text>
           </Text>
         )))}
@@ -663,13 +705,13 @@ export const register: Register = on => {
             <Text dimColor>slots </Text>
             <Text>{`devin ${Math.max(0, cap.devin - devins.length)}/${cap.devin} free`}</Text>
             <Text dimColor> · </Text>
-            <Text color={held.length === slots.length && slots.length > 0 ? '#ffd75f' : undefined}>
+            <Text color={held.length === slots.length && slots.length > 0 ? C.warn : undefined}>
               {`tests ${slots.length - held.length}/${slots.length} free`}
             </Text>
-            {waiting > 0 && <Text color="#ff875f">{` · ${waiting} queued`}</Text>}
+            {waiting > 0 && <Text color={C.alert}>{` · ${waiting} queued`}</Text>}
             {db && <Text dimColor> · </Text>}
-            {db && <Text color={db.holder ? '#ffd75f' : undefined}>{`db ${db.holder ? 'running' : 'free'}`}</Text>}
-            {db && db.waiting > 0 && <Text color="#ff875f">{` · ${db.waiting} queued`}</Text>}
+            {db && <Text color={db.holder ? C.warn : undefined}>{`db ${db.holder ? 'running' : 'free'}`}</Text>}
+            {db && db.waiting > 0 && <Text color={C.alert}>{` · ${db.waiting} queued`}</Text>}
           </Text>
         )}
         {held.map(s => (
@@ -689,9 +731,9 @@ export const register: Register = on => {
               )}
               <Box flexDirection="column" flexShrink={1}>
                 <Text bold color="#4fe3d0" wrap="truncate-end">
-                  DEVIN <Text color="#d0d0d0">{`· ${run.worktree} · ${m.model} `}</Text>
+                  DEVIN <Text color={C.fg}>{`· ${run.worktree} · ${m.model} `}</Text>
                   <Text color={m.color}>{m.cost}</Text>
-                  <Text color="#d0d0d0">{` · ${minutes(run.seconds)}`}</Text>
+                  <Text color={C.fg}>{` · ${minutes(run.seconds)}`}</Text>
                 </Text>
                 {cut(`devin-${run.pid}`, wrap => <Text dimColor wrap={wrap}>{run.last || '…'}</Text>)}
               </Box>
@@ -735,7 +777,7 @@ export const register: Register = on => {
           <Text dimColor wrap="truncate-end">{`claude party: ≈${fmtCost(spent)} · ${big(used)} processed · ${party.length} run${party.length > 1 ? 's' : ''}`}</Text>
         )}
 
-        {rule('MAP', '#5faf5f')}
+        {rule('MAP', C.ok)}
         {trees.map(t => {
           const icon = treeIcon(t)
           // ▸ unfolds the worktree's changed files; the tree hangs under its name.
@@ -761,13 +803,13 @@ export const register: Register = on => {
                 <Box key={`file-${t.name}-${i}`} flexDirection="row">
                   <Box flexDirection="row" flexShrink={1} overflow="hidden">
                     <Text dimColor>{guide}</Text>
-                    {node.file ? <Text color={FILE_COLORS[node.file.status] ?? '#ff875f'}>{`${node.file.status} `}</Text> : null}
+                    {node.file ? <Text color={fileColor(node.file.status)}>{`${node.file.status} `}</Text> : null}
                     {node.file ? (
                       <Text wrap="truncate-end" strikethrough={node.file.status === 'D'}>{node.name}</Text>
                     ) : (
-                      <Text wrap="truncate-end" color="#5fafff">{`${node.name}/`}</Text>
+                      <Text wrap="truncate-end" color={C.accent}>{`${node.name}/`}</Text>
                     )}
-                    {node.file?.unsaved ? <Text color="#ffd75f">{' ●'}</Text> : null}
+                    {node.file?.unsaved ? <Text color={C.warn}>{' ●'}</Text> : null}
                   </Box>
                   <Box flexGrow={1} />
                   {node.add + node.del > 0 && <Text dimColor={!node.file}>{`+${node.add} −${node.del}`}</Text>}
@@ -777,7 +819,7 @@ export const register: Register = on => {
             </Box>
           )
         })}
-        {(d?.stashes ?? 0) > 0 && <Text color="#ffd75f">{`⚠ ${d?.stashes} stash(es) in the repo: check before anyone pops one`}</Text>}
+        {(d?.stashes ?? 0) > 0 && <Text color={C.warn}>{`⚠ ${d?.stashes} stash(es) in the repo: check before anyone pops one`}</Text>}
 
         {rule('QUEST LOG', '#f5c518')}
         {quest.length === 0 && <Text dimColor>{d?.release || r.release ? 'No ledger rows yet.' : 'Give a release: /coord-status <release>'}</Text>}
@@ -790,7 +832,7 @@ export const register: Register = on => {
           </Text>
         )))}
 
-        {r.error !== '' && <Text color="#ff5f5f" wrap="truncate-end">{`status.py: ${r.error}`}</Text>}
+        {r.error !== '' && <Text color={C.err} wrap="truncate-end">{`status.py: ${r.error}`}</Text>}
         <Box flexDirection="row" gap={2} marginTop={1}>
           <Button key="refresh" label="↻ Refresh" onPress={() => void refresh($, r.release)} />
           <Button key="close" label="✕ Close" onPress={() => void closePane($)} />
@@ -807,6 +849,7 @@ export const register: Register = on => {
     const d = r.data
     if (e.props.hasSurvey || !d?.release || (await read($, bandHidden))) return next(e)
     const { Box, Text, Button } = $.ui.resolve(e)
+    await followSkin($)
     const party = await read($, runs)
     const merged = d.tasks.filter(t => t.merged ?? t.event.startsWith('MERGED')).length
     const [full, empty] = bar(d.tasks.length ? merged / d.tasks.length : 0, Math.max(6, Math.min(20, e.props.bodyColumns - 70)))
@@ -826,7 +869,7 @@ export const register: Register = on => {
         <Text>{`${merged}/${d.tasks.length} merged`}</Text>
         <Text color="#4fe3d0">{`devin ${d.devin.length}`}</Text>
         <Text color="#d97757">{`claude ${claude}`}</Text>
-        {checks > 0 && <Text color="#ff87ff">{`👁 ${checks}`}</Text>}
+        {checks > 0 && <Text color={C.you}>{`👁 ${checks}`}</Text>}
         <Button key="band-pane" label="▣ pane" plain onPress={() => void togglePane($, r.release)} />
         <Button key="band-dismiss" label="✕" plain role="dismiss" onPress={() => update($, bandHidden, () => true)} />
       </Box>

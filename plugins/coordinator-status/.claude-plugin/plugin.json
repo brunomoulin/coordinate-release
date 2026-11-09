@@ -1,6 +1,6 @@
 {
   "name": "coordinator-status",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "Coordinator command center: context and 5-hour window in the status line, a /coord-status pane (party with per-agent context, cost and time, worktrees with their changed files, quest log, eyeball checks, slots), a band above the prompt, and a step tool for subagents",
   "types": "./types/index.d.ts"
 }

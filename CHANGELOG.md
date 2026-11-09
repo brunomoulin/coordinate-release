@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.32.1 (2026-11-09)
+
+- **The pane follows your skin (mod 0.11.0).** With the skins mod on a skin made with `/skin` or
+  its designer, the pane's status colours (ok, warn, err, muted, body text) and highlights (`read`,
+  `user`, `write`, `web` slots) come from that skin, and change when it does. Coordinator gold,
+  Claude orange, Devin teal and the sprites stay. Built-in skins, slots a made skin leaves to its
+  base, and no skins mod keep the pane's own colours (skins keeps built-in palettes in its code;
+  ROADMAP has the request to share them).
+
 ## 2.32.0 (2026-11-07)
 
 - **The status pane opens by itself (mod 0.10.0)** the first time a coordinator starts in a

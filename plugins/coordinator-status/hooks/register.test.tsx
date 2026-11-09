@@ -423,3 +423,28 @@ test('auto-open: no coordinate adapter, no pane', async ($, on) => {
   await settle()
   expect(seen.opened).toEqual([])
 })
+
+test('skin: a skin made with the skins mod colours the pane; built-in or none keeps the defaults', async ($, on) => {
+  engine(on)
+  const custom = { coordinator: { base: 'tokyo-night', palette: { ok: '#8fc79a', err: '#e06c75', user: '#7a9cc6' } } }
+  let skin = 'coordinator'
+  on('state.get', { plugin: 'skins', key: 'prefs' } as never, () => ({ value: { value: { skin }, version: 1 } }) as never)
+  on('state.get', { plugin: 'skins', key: 'custom' } as never, () => ({ value: { value: custom, version: 1 } }) as never)
+  await $.session.start({ cwd: '/w', surface: 'terminal', isInteractive: true } as never)
+  await $.command.run({ command: 'coord-status', args: '2.6.2' } as never)
+  const mount = () => $.ui.mount({
+    plugin: 'coordinator-status', surface: 'terminal', component: 'Pane',
+    props: {} as never, requestId: 'coordinator-status', viewport: { columns: 70, rows: 40 } as never,
+  })
+  // CHOP ME is the alert colour: the skin's `write` slot, which this skin leaves to its base.
+  const color = async (text: RegExp) => {
+    const pane = await mount()
+    const found = await pane.find({ type: 'Text', text })
+    await pane.unmount()
+    return found?.props.color
+  }
+  expect(await color(/^merged: CHOP ME$/)).toBe('#ff875f')
+  expect(await color(/^HP $/)).toBe('#e06c75')
+  skin = 'nord'
+  expect(await color(/^HP $/)).toBe('#ff5f5f')
+})
