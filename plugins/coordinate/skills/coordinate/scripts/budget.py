@@ -1,6 +1,7 @@
 """Budget posture: how hard to spend the Claude and Devin weekly subscriptions right now.
 
-  budget.py [<repo>] [--json]                       posture, pace, routes allowed, open questions
+  budget.py [<repo>] [--release R|auto] [--json]    posture, pace, routes allowed, open questions
+                                                    (with a release: its /coordinate settings too)
   budget.py devin <pct|exhausted> [--resets DATE]   record the Devin paid (Fusion) quota you saw
   budget.py answer <signal> "<answer>"              record the owner's answer to a budget question
   budget.py route <repo> --release R <task> <route> [--why TEXT] [--override REASON]
@@ -62,7 +63,14 @@ ROUTES = {
                  'eyeball': ['devin_eyeball'], 'note': 'Devin only, chained with chain.py so they run without Claude turns; '
                          'Fusion review, else park it. Park the session after the current merge.'},
 }
+# budget.mode "off" (/coordinate settings): every route, no fit check, no park; spend still recorded.
+ROUTES['OFF'] = {**ROUTES['SURPLUS'], 'note': 'Budget off: every route allowed; spend is still recorded on ROUTE rows.'}
 KINDS = ('build', 'review', 'critique', 'eyeball')
+# Every route a kind can take, in the order the postures list them: where a ticked route joins.
+KIND_ROUTES = {k: list(dict.fromkeys(x for v in ROUTES.values() for x in v[k])) for k in KINDS}
+# routing.default_builder -> its build route.
+DEFAULT_ROUTE = {'devin': 'devin_swe2', 'sonnet': 'sonnet_implement', 'haiku': 'haiku_implement',
+                 'opus': 'opus_implement'}
 CLAUDE_BUILDS = ('haiku_implement', 'sonnet_implement', 'opus_implement')
 
 ALL_ROUTES = {'devin_swe2', 'devin_fusion', 'haiku_implement', 'sonnet_implement', 'opus_implement',
@@ -226,6 +234,8 @@ def posture(a, s=None):
     else:
         p = 'ON PACE'
     known = seven is not None
+    if t.get('mode') == 'off':  # /coordinate settings: budget off
+        p = 'OFF'
     return p, pace, known
 
 
@@ -236,6 +246,8 @@ def misfit(a, p, s, route):
     72-75% took it to 99%). A fixed 50% gate made a Sonnet build wait at 59% (pilot 2.11.0).
     7d, TIGHT only: what is left after the build must cover `tight_headroom` of an on-pace share
     of the rest of the week (pilot 2.11.0: 7d 36% at 30.5% refused a Sonnet build worth 1-3%)."""
+    if p == 'OFF':
+        return None
     t, m = a['budget'], route.split('_')[0]
     five = s['five_hour_pct']
     if five is not None and five + t['build_cost_5h'][m] >= t['five_hour_fit_pct']:
@@ -265,14 +277,29 @@ def reset_text(s):
 
 
 def allowed(a, p, s=None):
-    """The posture's routes plus the Claude builds that fit (`misfit`), minus adapter
-    `budget.overrides` set to false and Fusion when exhausted."""
+    """The posture's routes plus the Claude builds that fit (`misfit`). Adapter `budget.overrides`
+    set to true joins a route whatever the posture (a Claude build still has to fit); false removes
+    it. `routing.default_builder` leads the build list whenever the posture or a tick allows it
+    (spec: the posture's list is the fallback, so it never overrides CRITICAL). Fusion
+    goes when the Devin quota is exhausted, and so does SWE-2 when `devin.model` is a paid model."""
     s = s or signals()
-    off = {k for k, v in a['budget']['overrides'].items() if v is False}
+    ov = a['budget'].get('overrides') or {}
+    off = {k for k, v in ov.items() if v is False}
+    on = {k for k, v in ov.items() if v is True}
+    first = DEFAULT_ROUTE.get((a.get('routing') or {}).get('default_builder'))
     if _load(DEVIN).get('pct') == 'exhausted':
         off |= {'fusion_review', 'devin_fusion'}
+        if a.get('devin') and ad.devin_cost(a['devin']['model']) == 'paid':
+            off.add('devin_swe2')
     r = {k: [x for x in ROUTES[p][k] if x not in CLAUDE_BUILDS] for k in KINDS}
-    r['build'] += [x for x in claude_candidates(p) if not misfit(a, p, s, x)]
+    for k in KINDS:
+        r[k] += [x for x in KIND_ROUTES[k] if x in on and x not in CLAUDE_BUILDS and x not in r[k]]
+    cands = claude_candidates(p)
+    cands += [x for x in CLAUDE_BUILDS if x in on and x not in cands]
+    r['build'] += [x for x in cands if not misfit(a, p, s, x)]
+    if first in r['build']:
+        r['build'].remove(first)
+        r['build'].insert(0, first)
     return {k: [x for x in v if x not in off] for k, v in r.items()}
 
 
@@ -307,7 +334,8 @@ def summary(a):
     p, pace, known = posture(a, s)
     fmt = lambda v, suf='%': 'unknown' if v is None else f'{round(v)}{suf}'
     five = fmt(s['five_hour_pct']) + (f" ({reset_text(s)})" if s['five_hour_pct'] is not None else '')
-    line = (f"posture {p}{'' if known else ' (7d unknown: treated as ON PACE)'} · "
+    state = ' (budget off)' if p == 'OFF' else '' if known else ' (7d unknown: treated as ON PACE)'
+    line = (f"posture {p}{state} · "
             f"Claude 7d {fmt(s['seven_day_pct'])} {week_text(s, a['budget'])}"
             f" (pace {'?' if pace is None else f'{pace:.2f}'}) · 5h {five} · "
             f"Devin paid {s['devin_paid'] if isinstance(s['devin_paid'], str) else fmt(s['devin_paid'])}")
@@ -398,12 +426,13 @@ def main():
         override = ad.opt(rest, '--override')
         if len(rest) != 3 or not release:
             sys.exit(__doc__)
-        a, _ = ad.load(rest[0])
-        route_row(a, ad.resolve_release(a, release), rest[1], rest[2], why, override)
+        a, _, release = ad.load_release(rest[0], release)
+        route_row(a, release, rest[1], rest[2], why, override)
         return
     as_json = '--json' in args
+    release = ad.opt(args, '--release')
     args = [x for x in args if x != '--json']
-    a, _ = ad.load(args[0] if args else '.')
+    a, _, _ = ad.load_release(args[0] if args else '.', release)
     b = summary(a)
     if as_json:
         print(json.dumps(b))

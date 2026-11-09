@@ -1,6 +1,6 @@
 ---
 name: coordinate
-description: Use when the user says "pilot coordinator", "coordinate <release>", "resume coordinator", "coordinator on <release>", "/coordinate init", "/coordinate away <release>", or asks for a release to be run by delegating tasks to Devin CLI or Claude subagents rather than implemented in this session; also when resuming such a release after /clear, a compaction or a Claude usage limit.
+description: Use when the user says "pilot coordinator", "coordinate <release>", "resume coordinator", "coordinator on <release>", "/coordinate init", "/coordinate away <release>", "/coordinate settings", asks to change who builds or reviews, the budget, the Devin model or the context limits for a coordinated release, or asks for a release to be run by delegating tasks to Devin CLI or Claude subagents rather than implemented in this session; also when resuming such a release after /clear, a compaction or a Claude usage limit.
 ---
 
 # Coordinate a Release
@@ -111,12 +111,14 @@ pick stays in `decisions.md` after its task merges. `ledger.py decisions <ledger
    layers, and the brief names the one shared rule they all go through before round 1. 2.10.0's
    panels (270) took 11 rounds, each re-review finding the next layer, until r9 put the rule in
    one place.
-3. `python3 $S/budget.py <repo>` prints the posture (SURPLUS, ON PACE, TIGHT, CRITICAL) and the
-   routes it allows. Pick each task's route inside it without asking (`references/routing.md`),
+3. `python3 $S/budget.py <repo> --release R` prints the posture (SURPLUS, ON PACE, TIGHT,
+   CRITICAL, or OFF when the owner turned the budget off) and the routes it allows. The first build
+   route is the owner's default implementer (`routing.default_builder`): give a task to it unless
+   the task needs another (`references/routing.md`). Pick each task's route inside the list without asking,
    then `python3 $S/budget.py route <repo> --release R <task> <route> --why "<reason>"`; a
    reroute or a wait agreed in chat gets its own ROUTE row with its why (the v3 router's
-   training data: in 2.11.0, 466 r3 moved to Devin for a hot 5h window, written nowhere). Adapter
-   `budget.overrides` are the owner's vetoes. A route the posture does not allow is refused; read
+   training data: in 2.11.0, 466 r3 moved to Devin for a hot 5h window, written nowhere). The
+   owner's settings (§Settings) tick routes on (allowed whatever the posture) or off (vetoed). A route the posture does not allow is refused; read
    why before reaching for `--override "<reason>"` (written into the row). A Claude build also
    has to fit: the 5-hour window plus its estimate stays under 85% (you share that window, and a
    build that hits the cap stalls you and every Devin waiting on you), and under TIGHT a Sonnet
@@ -373,6 +375,32 @@ In this session when `session.py` says the close-out fits (about 60k); otherwise
      file holds only what the skill does not carry yet (cap `live_caps.lessons`, 80 lines);
    - `/remember` and any saves, BEFORE the report;
    - **the final report, the last thing you print**: what shipped, what needs a decision.
+
+## Settings
+
+`/coordinate settings` (release scope unless the owner says repo; knobs and why-lines in `settings.py show`):
+
+1. `python3 $S/settings.py show <repo> --release R --json`.
+2. `AskUserQuestion`, header `Preset`: Balanced (Recommended), Frugal, All-out, Custom; each option's
+   `preview` lists that preset's values in the three groups (from `presets` in the JSON).
+3. After a preset, one question "Change anything in <preset>?" (No (Recommended) / Yes). Yes, or
+   Custom: at most two dialogs. (a) Devin builders (multiSelect: SWE-2, Fusion), Claude builders
+   (multiSelect: Haiku, Sonnet, Opus), reviewers (multiSelect: Opus, Fusion, Sonnet, SWE-2), who
+   builds first. (b) Budget on/off, 5h cutoff (85 Recommended / 60 / 95), hand-off (450k/650k
+   Recommended, 350k/500k, 600k/800k), Devin model (the first free `choices`, the first
+   Recommended, each description its cost; Other takes any model id).
+   Toggles to routes: Sonnet reviewer = `sonnet_review`, `sonnet_critique`, `sonnet_eyeball`; SWE-2
+   reviewer = `swe2_review`, `devin_eyeball`; Opus = `opus_review`; Fusion = `fusion_review`;
+   builders one to one (`devin_swe2`, `devin_fusion`, `haiku_implement`, `sonnet_implement`,
+   `opus_implement`). Ticked writes `true`, unticked `false`.
+4. Scope: This release (Recommended) / The whole repo (`--repo`: it commits on a chore branch).
+5. `settings.py preset <repo> --release R <name>`, then `settings.py set <repo> --release R
+   <key>=<value> ...` with the diff. Relay its lines verbatim.
+6. Plain words ("build with Opus", "budget off", "use gpt-astra on Devin") skip the picker: map
+   them to `settings.py set`, release scope unless the owner says repo, and relay the line.
+7. `chain.py` stops with `Free now:` when a paid Devin model ran out of quota. Watched: one
+   `AskUserQuestion` to switch to the first free model. Away mode: switch it for the release with
+   the printed `settings.py set` line, record it with `decide --auto`, relaunch the stopped task.
 
 ## Red Flags: Stop
 

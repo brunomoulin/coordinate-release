@@ -70,8 +70,7 @@ def merges_since(a, release, start):
 def main():
     args = sys.argv[1:]
     release = ad.opt(args, '--release')
-    a, _ = ad.load(args[0] if args else '.')
-    release = ad.resolve_release(a, release)
+    a, _, release = ad.load_release(args[0] if args else '.', release)
     t = transcript()
     if not t:
         ad.die('no transcript found')

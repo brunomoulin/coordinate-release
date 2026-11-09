@@ -234,7 +234,7 @@ def as_json(a, main_, release):
     procs = devin_procs()
     running = {cwd for _, cwd, _, _ in procs}
     devin = [{'pid': pid, 'worktree': os.path.basename(cwd), 'log': log, 'model': model,
-              'paid': 'fusion' in model or 'opus' in model, 'seconds': elapsed(pid),
+              'paid': ad.devin_cost(model) == 'paid', 'seconds': elapsed(pid),
               'last': (tail(log, 1) or [''])[0]} for pid, cwd, log, model in procs]
     tasks = []
     if release:
@@ -263,7 +263,8 @@ def as_json(a, main_, release):
             'tasks': tasks, 'limits': a['session_limits'], 'concurrency': a['concurrency'],
             'test_slots': [{'slot': n, 'holder': h} for n, h in holders],
             'test_waiting': test_waiting(holders), 'db': db_run(a), 'checks': open_checks,
-            'posture': b['posture'], 'budget_line': b['line'], 'away': away(a, release)}
+            'posture': b['posture'], 'budget_line': b['line'], 'away': away(a, release),
+            'settings': ad.release_sets(ad.ledger_file(a, release)) if release else {}}
 
 
 def main():
@@ -272,8 +273,7 @@ def main():
         sys.exit(__doc__)
     release = ad.opt(args, '--release')
     want_json = '--json' in args
-    a, main_ = ad.load(args[0])
-    release = ad.resolve_release(a, release or ('auto' if want_json else None))
+    a, main_, release = ad.load_release(args[0], release or ('auto' if want_json else None))
     if want_json:
         import json
         print(json.dumps(as_json(a, main_, release)))

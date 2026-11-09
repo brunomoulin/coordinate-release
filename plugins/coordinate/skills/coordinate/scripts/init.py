@@ -17,7 +17,7 @@ set differently from the draft are the owner's choices, listed as kept and not r
   6. Concurrency caps and test slots
   7. Task tracker: TaskMaster, a Markdown list (default TASKS.md, created when missing), or none
 """
-import glob, json, os, re, sys
+import glob, json, os, re, shutil, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import adapter as ad
 
@@ -137,6 +137,7 @@ def find_first(main, names):
 
 
 TRACKER_KEYS = {'tracker', 'tasks_file', 'taskmaster'}
+SETTINGS_KEYS = {'routing'}  # drafted, never asked: /coordinate settings changes them
 # The draft keys each of the seven questions decides, in order. env_files is detected, not asked.
 QUESTION_KEYS = (
     {'repo_rules', 'shared_rules'}, {'gates'}, {'db_test', 'db_snapshot'}, {'handoff', 'append_only'},
@@ -169,6 +170,8 @@ def compare(existing, draft):
     answered_tracker = bool(set(existing) & TRACKER_KEYS)
     missing, kept = [], []
     for k in draft:
+        if k in SETTINGS_KEYS:  # /coordinate settings owns them; DEFAULTS fills them in
+            continue
         if k not in existing:
             if not (k in TRACKER_KEYS and answered_tracker):
                 missing.append(k)
@@ -211,6 +214,8 @@ def main():
         'worktree_setup': setup,
         'ledger_archive': None,
         **tracker,
+        # Devin SWE-2 is free with a Devin subscription; without the CLI, Sonnet builds first.
+        'routing': {'default_builder': 'devin' if shutil.which('devin') else 'sonnet'},
     }
     existing = None
     if os.path.exists(target) and '--force' not in args:
@@ -251,6 +256,8 @@ def main():
         if asked:
             print('\nAsk only these in ONE AskUserQuestion batch (detected answer = recommended option):')
             print('\n'.join(asked))
+    builder = ((existing or draft).get('routing') or {}).get('default_builder', 'devin')
+    print(f'\nDefault implementer: {builder} (change with /coordinate settings)')
     if not ad.auto_mode_named(main_):
         print('\nAuto mode: no autoMode.environment entry names this repo. Its owner adds this line to '
               '~/.claude/settings.json (a session cannot):\n  ' + ad.auto_mode_line(main_))

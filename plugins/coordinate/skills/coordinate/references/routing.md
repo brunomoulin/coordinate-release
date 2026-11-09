@@ -4,7 +4,7 @@ Costs measured on pilot 2.6.0–2.7.0 (cached tokens read: what a session's ever
 
 | Who | Use for | Cost | Notes |
 |---|---|---|---|
-| **Devin SWE-2 High or Medium** | Default implementer: backend, security fixes, migrations, censuses, review-fix rounds, overnight chains | free; bounded by `concurrency.devin` slots | Always launched with `--model` (adapter `devin.model`; no other SWE-2 tier, no Devin default). Runs its DB tests through `db.py` only; the stamp check (a green run at HEAD) is the evidence. Weak git hygiene: check `git stash list` and the branch history after each run. Resume fails while Devin Desktop holds the session |
+| **Devin SWE-2 High or Medium** | Default implementer (unless `routing.default_builder` names a Claude model): backend, security fixes, migrations, censuses, review-fix rounds, overnight chains | free while the Devin catalog lists it Free; bounded by `concurrency.devin` slots | Always launched with `--model` (adapter `devin.model`, or a release's `/coordinate settings`; never Devin's own default). Runs its DB tests through `db.py` only; the stamp check (a green run at HEAD) is the evidence. Weak git hygiene: check `git stash list` and the branch history after each run. Resume fails while Devin Desktop holds the session |
 | **Haiku** (`Agent`, `model: haiku`) | Mechanical work: doc repoints, renames, census reads, log digests for the coordinator | cheapest Claude | SURPLUS only for implementation; digests any time |
 | **Sonnet** (`Agent`, `model: sonnet`) | UI tasks, medium tasks; `/critique` | 1.3–2.3M per critique | Resumable with SendMessage in the same coordinator session |
 | **Opus** (`Agent`, `model: opus`) | Code and security review; hard or security implementation in SURPLUS | 2–9M per review | 12 of 12 reviews changed code or filed a task |
@@ -24,6 +24,13 @@ elapsed % is floored at adapter `budget.pace_floor_pct` (25): in a week's first 
 | **ON PACE** | 0.7–1.1 | Devin (all slots); Sonnet for UI | Opus | hard 650k |
 | **TIGHT** | pace > 1.1 | Devin; Sonnet only when it fits the week (below) | Fusion | park at 400k |
 | **CRITICAL** | 7d ≥ 90% | Devin only, chained with `chain.py` so they run without Claude turns | Fusion, else park the review | park after the current merge |
+| **OFF** | the owner set `budget.mode` off (`/coordinate settings`) | every route (SURPLUS's), no fit check | every route | hard limit as set, never parks for the budget |
+
+**The owner's settings move routes.** A route ticked in `/coordinate settings`
+(`budget.overrides.<route>: true`) is allowed whatever the posture; a Claude build still has to
+fit (below) unless the budget is off. Unticked (`false`) is never allowed. `routing.default_builder`
+leads the build list: give it the task unless the task needs another. A paid `devin.model` (not
+Free in the Devin catalog) leaves the list once the Devin quota is exhausted, as Fusion does.
 
 **A Claude build has to fit, in any posture.** The 5-hour window plus the build's estimate
 (`build_cost_5h`: Haiku 3, Sonnet 10, Opus 20) stays under `five_hour_fit_pct` (85%), or the

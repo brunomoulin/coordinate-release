@@ -137,7 +137,7 @@ def auto_route(f, task, who):
         print(f'WARNING: no ROUTE row for {task} and `{who}` names no route: '
               f'budget.py route <repo> --release R {task} <route>')
         return
-    a, _ = ad.load(os.path.dirname(os.path.abspath(f)))
+    a, _ = ad.load(os.path.dirname(os.path.abspath(f)), release_of(f))
     budget.route_row(a, release_of(f), task, route, f'auto from who={who.strip()}', strict=False)
 
 

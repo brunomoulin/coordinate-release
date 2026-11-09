@@ -34,7 +34,44 @@ def inotify_limit():
         return None
 
 
+def devin_checks(a, which=shutil.which, run=subprocess.run):
+    """(fails, warns) for Devin: the CLI, its config's default model, and the adapter model's cost
+    from the live catalog (refreshed here, once per preflight)."""
+    fails, warns = [], []
+    builder = (a.get('routing') or {}).get('default_builder', 'devin')
+    if not which('devin'):
+        if builder == 'devin':
+            fails.append('devin CLI not on PATH (or /coordinate settings: another default implementer)')
+        else:
+            warns.append(f'devin CLI not on PATH: builds go to {builder}')
+        return fails, warns
+    try:
+        c = json.load(open(os.path.expanduser('~/.config/devin/config.json')))
+        m = (c.get('agent') or {}).get('model') or c.get('model', '')
+        if m != a['devin']['model']:
+            warns.append(f'Devin config default model is {m}: every launch must pass --model '
+                         f'{a["devin"]["model"]}, resumes included')
+    except (OSError, ValueError):
+        pass
+    try:
+        prev = json.load(open(ad.DEVIN_CATALOG))['models']
+    except (OSError, ValueError, KeyError, TypeError):
+        prev = {}
+    cat = ad.devin_catalog(refresh=True, run=run)
+    m = a['devin']['model']
+    if ad.devin_cost(m, cat) == 'paid':
+        summary = (cat.get(m) or {}).get('summary') or 'not in the Devin catalog'
+        free = ', '.join(ad.free_devin_models(cat)) or 'none listed'
+        if (prev.get(m) or {}).get('tier') == 'Free':
+            warns.append(f'{m} is no longer free ({summary}). Free now: {free}. /coordinate settings to switch')
+        else:
+            warns.append(f'Devin model {m} is paid ({summary}): builds spend the Devin quota. Free now: {free}')
+    return fails, warns
+
+
 def auto_mode_warning(main, home=None):
+    if ad.auto_mode_outdated(main, home):
+        return f'the autoMode line names SWE-2 only: re-paste it once: {ad.auto_mode_line(main)}'
     if ad.auto_mode_named(main, home):
         return None
     return (f'no `autoMode.environment` entry names {os.path.basename(main)}: auto mode may deny the '
@@ -85,21 +122,10 @@ def main():
     if missing:
         fails.append('allow rules missing. The owner adds to ~/.claude/settings.local.json "permissions.allow": '
                      + ', '.join(json.dumps(m) for m in missing))
-    if not shutil.which('devin'):
-        fails.append('devin CLI not on PATH')
-    else:
-        try:
-            c = json.load(open(os.path.expanduser('~/.config/devin/config.json')))
-            m = (c.get('agent') or {}).get('model') or c.get('model', '')
-            if m not in ad.DEVIN_BUILD_MODELS:
-                warns.append(f'Devin config default model is {m}: every launch must pass --model '
-                             f'{a["devin"]["model"]}, resumes included')
-        except (OSError, ValueError):
-            pass
-        if a['devin']['model'] not in ad.DEVIN_BUILD_MODELS:
-            fails.append(f'adapter devin.model is {a["devin"]["model"]}: set it to '
-                         f'{" or ".join(ad.DEVIN_BUILD_MODELS)}')
-    cur = ad.git(main_, 'rev-parse', '--abbrev-ref', 'HEAD')
+    f, w = devin_checks(a)
+    fails += f
+    warns += w
+    cur =ad.git(main_, 'rev-parse', '--abbrev-ref', 'HEAD')
     if cur != a['main_branch']:
         warns.append(f'main checkout is on {cur}, not {a["main_branch"]}')
     dirty = ad.git(main_, 'status', '--porcelain').splitlines()

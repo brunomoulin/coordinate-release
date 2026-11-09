@@ -46,6 +46,7 @@ the version it loaded.
 | `coordinate <release>` | **Watched mode** (the default): every real choice waits for you, in one batch per wave |
 | `/coordinate away <release>` | **Away mode**, for nights and long breaks: the coordinator picks where undoing is cheap and records each pick; schema, deploy, security, product and prod choices wait for you |
 | "away mode off" | Back to watched mode; you review the picks it made (ok or override each) |
+| `/coordinate settings` | Pick a preset (Balanced, Frugal, All-out) or set who builds and reviews, the budget, the Devin model and the hand-off limits, for this release or the whole repo |
 | `resume coordinator on <release>` | Pick up after a park, `/clear`, a compaction or a usage limit |
 | *(automatic)* | **Wake**: a release parked near the 5-hour cap restarts itself after the reset, in a background session you see in the Claude app |
 | `/coord-status` | Open the status pane for the newest release |
@@ -55,6 +56,12 @@ the version it loaded.
 
 Away mode is the coordinator's own decision policy. It is not Claude Code's auto permission mode,
 and either can be on without the other.
+
+**Settings.** `/coordinate settings` opens a picker (arrows and space). Plain words work too:
+"build with Opus on this release", "turn the budget off", "use gpt-astra on Devin". A change
+applies to the current release unless you say repo, and you get one line back per change. Devin
+model costs come live from `devin models`: a model that isn't Free there spends your Devin quota,
+and when the quota runs out the coordinator offers the free ones.
 
 ## The status pane
 

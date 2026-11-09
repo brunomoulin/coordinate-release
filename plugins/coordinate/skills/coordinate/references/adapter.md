@@ -46,8 +46,23 @@ ledger would block every merge. The close-out copies the finished ledger into th
 | `lessons_file` | `.coordinate/lessons.md` | Where each release's lessons are appended |
 | `ledger_archive` | `null` | e.g. `documentation/releases/{release}-ledger.md`: `closeout.py` copies the ledger there; a value ending in `/` means `<folder>/{release}.md`, and `preflight.py` FAILs a fixed file name |
 | `session_limits` | `{soft_tokens: 450000, hard_tokens: 650000, tight_tokens: 400000, closeout_tokens: 60000, merges_warn: 10}` | SKILL.md §8 |
-| `budget` | `{surplus_pace: 0.7, tight_pace: 1.1, five_hour_fit_pct: 85, tight_headroom: 0.75, build_cost_5h: {haiku: 3, sonnet: 10, opus: 20}, build_cost_7d: {haiku: 0.5, sonnet: 2, opus: 5}, critical_pct: 90, surplus_reset_hours: 24, surplus_reset_pct: 70, pace_floor_pct: 25, overrides: {}}` | Posture thresholds (`five_hour_fit_pct`: a Claude build launches only while 5h % + its `build_cost_5h` stays under it, any posture; `tight_headroom`: under TIGHT, a Sonnet build launches when the week left after its `build_cost_7d` covers this share of on-pace (routing.md); tune the costs from the ROUTE rows' `5h=`/`7d=`; `pace_floor_pct`: the least week-elapsed % pace divides by); `overrides` like `{"opus_implement": false}` |
-| `devin` | `{model: swe-2-high, fusion_model: <Opus High Fusion>}` | `model` must be `swe-2-high` or `swe-2-medium` (preflight FAILs, chain.py refuses otherwise) |
+| `budget` | `{surplus_pace: 0.7, tight_pace: 1.1, five_hour_fit_pct: 85, tight_headroom: 0.75, build_cost_5h: {haiku: 3, sonnet: 10, opus: 20}, build_cost_7d: {haiku: 0.5, sonnet: 2, opus: 5}, critical_pct: 90, surplus_reset_hours: 24, surplus_reset_pct: 70, pace_floor_pct: 25, overrides: {}, mode: auto}` | Posture thresholds (`five_hour_fit_pct`: a Claude build launches only while 5h % + its `build_cost_5h` stays under it, any posture; `tight_headroom`: under TIGHT, a Sonnet build launches when the week left after its `build_cost_7d` covers this share of on-pace (routing.md); tune the costs from the ROUTE rows' `5h=`/`7d=`; `pace_floor_pct`: the least week-elapsed % pace divides by); `overrides` per route: `false` vetoes it, `true` allows it whatever the posture (a Claude build still has to fit), unset lets the posture decide; `mode`: `auto`, or `off` (posture OFF: every route, no fit check, no park; ROUTE rows still record the spend) |
+| `devin` | `{model: swe-2-high, fusion_model: <Opus High Fusion>}` | Any Devin model id, named on every launch. Its cost comes from the live catalog (below): a model not listed as Free spends the Devin quota, and its builds stop when the quota is exhausted |
+| `routing` | `{default_builder: devin}` | Who builds first: `devin`, `sonnet`, `haiku` or `opus`. Leads `budget.py`'s build list whenever the posture or a tick allows it; never overrides the posture. Presets leave it and the Devin models alone. `init.py` drafts `sonnet` when the `devin` CLI is missing |
+
+**Release settings.** `/coordinate settings` (`settings.py`) writes a release's choices as timeline
+rows `SET <dotted.key>=<json value>` (who `owner`). The latest row per key wins and
+`SET <key>=default` drops it. Precedence: release rows, then this file, then the defaults above;
+`budget.overrides` merge per route, so a release can turn on a route the repo vetoed.
+Every script given `--release R` reads them. A row whose value is not JSON is skipped with a warning.
+`settings.py set --repo` edits this file; when it is committed, on a `chore/settings-<date>` branch
+merged with `--no-ff` (main must be clean). The knobs and their reasons: `settings.py show`.
+
+**Devin catalog.** `devin models list --format json` gives each model's `cost_tier` (Free, Low,
+Med, High cost) and `cost_summary`. `preflight.py` refreshes the cache
+`~/.claude/coordinate/devin-models.json`, and warns when the adapter model is paid or stopped
+being free. No `devin`, or the command fails: the last cache; no cache: SWE-2 high and medium count
+as free.
 
 v1 keys `session_limits.context_tokens`, `session_limits.merges` and `review.quota_threshold_pct`
 are ignored; `preflight.py` warns about them.

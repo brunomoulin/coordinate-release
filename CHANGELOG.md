@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.33.0 (2026-11-09)
+
+- **`/coordinate settings`.** A picker on `AskUserQuestion`: presets Balanced (today's defaults),
+  Frugal and All-out, or Custom over three groups (who does the work, how hard to spend, when to
+  hand off). Plain words work too ("build with Opus", "budget off"). New `settings.py show | set |
+  preset`: every knob shows its value, where it comes from (release, repo, default) and why.
+- **Release scope by default.** A release's settings are `SET <key>=<json>` rows in its timeline,
+  over the repo adapter, over the defaults; every script given `--release` reads them. Repo scope
+  (`--repo`) edits the adapter, committing it on a `chore/settings-<date>` branch merged `--no-ff`.
+- **Ticked means allowed.** `budget.overrides.<route>: true` allows a route whatever the posture (a
+  Claude build still has to fit the 5-hour window). `budget.mode: off` gives posture OFF: every
+  route, no fit check, no budget park; ROUTE rows still record the spend.
+- **Who builds first.** `routing.default_builder` (devin, sonnet, haiku, opus) leads the build
+  list. `init.py` drafts `sonnet` when the `devin` CLI is missing, and a missing `devin` is only a
+  warning then.
+- **Devin cost is read live.** `devin models list --format json` (cached in
+  `~/.claude/coordinate/devin-models.json`, refreshed at preflight) says which models are Free.
+  Any Devin model id is accepted; a paid one spends the Devin quota and leaves the build list when
+  it runs out. `chain.py` then stops with `Free now: ...` and the line that switches the release.
+  Preflight warns when the adapter model is paid or stopped being free.
+- **Away-mode line.** The `autoMode.environment` line allows any model `devin models list` shows
+  for the account, not SWE-2 only, so a release's model switch and the quota-out fallback run
+  unattended. Preflight says to re-paste an old line once.
+- Fix: `adapter.load` no longer shares `DEFAULTS`' nested maps with the loaded adapter.
+
 ## 2.32.1 (2026-11-09)
 
 - **The pane follows your skin (mod 0.11.0).** With the skins mod on a skin made with `/skin` or
