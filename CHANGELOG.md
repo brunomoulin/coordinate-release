@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.33.3 (2026-11-10)
+
+Test runs leave the machine usable. Two runs at once, each sizing its own worker pool, took all
+24 threads of the owner's box to 99%.
+
+- `testlock.py` and `gates.py` run every test command at `nice -n 10`.
+- Each run gets `TEST_WORKER_BUDGET`: 80% of the cores split across `test_slots`, or all of them
+  while away mode is on in the current release. A repo's test config reads it to size its worker
+  pool (`references/adapter.md`, `test_slots`).
+
 ## 2.33.2 (2026-11-10)
 
 Wake fixes from a real overnight run (2026-11-10), where a woken session parked, stayed open, and

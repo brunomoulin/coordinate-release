@@ -8,10 +8,45 @@ People.*). The adapter's `test_slots` (default 1) sets how many runs may go at o
 a file `<log_dir>/test-slot-<n>.lock` held with flock, so a crashed run frees its slot. The repo is
 found from --repo or the current directory (any worktree). Exits with the command's exit code.
 `gates.py` takes a slot per gate; briefs tell implementers to run tests through this script.
+
+Every run goes under `nice -n 10`, so the desktop stays usable, and gets `TEST_WORKER_BUDGET`: the
+threads one run may use, 80% of the cores split across `test_slots` (all of them in away mode,
+when the owner is not at the machine). A repo's test config reads it to size its worker pool; two
+runs each sizing their own share took all 24 threads to 99% (2026-11-10).
 """
-import contextlib, fcntl, os, subprocess, sys, time
+import contextlib, fcntl, os, shlex, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import adapter as ad
+
+SHARE = 0.8       # of the cores, while the owner may be using the machine
+AWAY_SHARE = 1.0  # away mode: nobody is at it
+
+
+def away_now(a):
+    """Away mode is on in the release whose ledger was written last."""
+    release = ad.newest_ledger(a)
+    if not release:
+        return False
+    import status
+    return status.away(a, release)
+
+
+def worker_budget(a):
+    share = AWAY_SHARE if away_now(a) else SHARE
+    return max(1, int((os.cpu_count() or 1) * share) // max(1, int(a['test_slots'])))
+
+
+def run_env(a, base):
+    e = dict(base)
+    e['TEST_WORKER_BUDGET'] = str(worker_budget(a))
+    return e
+
+
+def niced(cmd):
+    """The command at nice 10: a list for subprocess, or a shell string (gates)."""
+    if isinstance(cmd, str):
+        return f'nice -n 10 sh -c {shlex.quote(cmd)}'
+    return ['nice', '-n', '10', *cmd]
 
 
 def _slot_path(a, n):
@@ -86,7 +121,7 @@ def main():
         sys.exit(__doc__)
     cmd = args[1:]
     with slot(a, ' '.join(cmd)[:80] + f' in {os.path.basename(os.getcwd())}'):
-        r = subprocess.run(cmd)
+        r = subprocess.run(niced(cmd), env=run_env(a, os.environ))
     sys.exit(r.returncode)
 
 

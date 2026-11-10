@@ -77,7 +77,8 @@ def run_gates(wt, a, evidence=None):
         for g in a['gates']:
             cwd = os.path.join(wt, g.get('dir', '.'))
             with testlock.slot(a, f'gate {g["name"]} in {name}'):
-                r = subprocess.run(g['cmd'], shell=True, cwd=cwd, env=ad.env(a),
+                r = subprocess.run(testlock.niced(g['cmd']), shell=True, cwd=cwd,
+                                   env=testlock.run_env(a, ad.env(a)),
                                    capture_output=True, text=True)
             out = r.stdout + r.stderr
             L.write(f'\n--- {g["name"]}: {g["cmd"]} -> exit {r.returncode}\n{out}\n')

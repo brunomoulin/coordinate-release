@@ -22,7 +22,7 @@ ledger would block every merge. The close-out copies the finished ledger into th
 | `path_prefix` | `''` | Prepended to PATH for every gate and DB run, when the gates need a different toolchain than the shell's |
 | `gate_grep` | | Regex picking the summary lines from gate output |
 | `install_on_change` | `{"package-lock.json": "npm install --no-audit --no-fund"}` | Lockfile name → command run in its folder when a merge (`merge.py`, `eyeball.py`) changed it; `{}` turns it off |
-| `test_slots` | `1` | Test runs allowed at once (`testlock.py`); raise when parallel runs stop timing out |
+| `test_slots` | `1` | Test runs allowed at once (`testlock.py`); raise when parallel runs stop timing out. Each run gets `TEST_WORKER_BUDGET` (80% of the cores ÷ slots; all cores in away mode) for the repo's test config to size its worker pool, and runs at `nice -n 10` |
 | `concurrency` | `{devin: 3, sonnet: 2, opus_review: 1}` | Parallel implementers and reviewers |
 | `db_test` | `null` | `{dir, cmd, new_glob?, default_timeout_ms?}` for the shared-database tier; run only through `db.py` |
 | `db_snapshot` | `null` | Command printing one JSON line about the DB (gets the worktree path as last arg). Include `pending_migrations: []`. Its script is trusted on first run; a later change stops `db.py` (exit 8) until `--trust-snapshot` |
