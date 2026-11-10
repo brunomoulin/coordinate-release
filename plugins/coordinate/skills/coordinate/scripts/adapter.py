@@ -73,52 +73,75 @@ USER_STATE = os.path.expanduser('~/.claude/coordinate')
 DEVIN_CATALOG = USER_STATE + '/devin-models.json'
 
 
-AUTO_MODE_FILES = ('{home}/.claude/settings.json', '{home}/.claude/settings.local.json',
+def claude_dir(home=None):
+    """Claude Code's profile folder: CLAUDE_CONFIG_DIR when set (a second profile runs with its own
+    settings and transcripts), else ~/.claude. `home` (tests) means <home>/.claude."""
+    if home:
+        return os.path.join(home, '.claude')
+    return os.environ.get('CLAUDE_CONFIG_DIR') or os.path.expanduser('~/.claude')
+
+
+AUTO_MODE_FILES = ('{claude}/settings.json', '{claude}/settings.local.json',
                    '{main}/.claude/settings.json', '{main}/.claude/settings.local.json')
+# The one autoMode line for every repo with an adapter (auto_mode_line_generic).
+GENERIC_SCOPE = 'any repo with a committed `.claude/coordinate.json`'
+
+
+def auto_mode_lines(main, home=None):
+    """Every `autoMode.environment` entry in the profile's and the project's settings."""
+    out = []
+    for f in AUTO_MODE_FILES:
+        try:
+            lines = json.load(open(f.format(claude=claude_dir(home), main=main))).get('autoMode', {}).get('environment', [])
+        except (OSError, ValueError, AttributeError):
+            continue
+        out += [l for l in lines if isinstance(l, str)]
+    return out
+
+
+def auto_mode_covers(line, main):
+    """The entry names this repo, or is the coordinator line for every repo with an adapter."""
+    return os.path.basename(main) in line or ('Coordinator workflow' in line and GENERIC_SCOPE in line)
 
 
 def auto_mode_named(main, home=None):
-    """True when an `autoMode.environment` entry in the user or project settings names this repo.
-    Without one, auto mode's classifier denied the coordinator's launches as "Auto-Mode Bypass"."""
-    name, home = os.path.basename(main), home or os.path.expanduser('~')
-    for f in AUTO_MODE_FILES:
-        try:
-            lines = json.load(open(f.format(home=home, main=main))).get('autoMode', {}).get('environment', [])
-        except (OSError, ValueError, AttributeError):
-            continue
-        if any(name in l for l in lines if isinstance(l, str)):
-            return True
-    return False
+    """True when an `autoMode.environment` entry covers this repo. Without one, auto mode's
+    classifier denied the coordinator's launches as "Auto-Mode Bypass"."""
+    return any(auto_mode_covers(l, main) for l in auto_mode_lines(main, home))
 
 
 OLD_AUTO_MODEL = 'swe-2-high|swe-2-medium'
 
 
 def auto_mode_outdated(main, home=None):
-    """True when an `autoMode.environment` entry naming this repo is the pre-2.33.0 text, which
-    authorized SWE-2 only: a model picked with /coordinate settings would be denied."""
-    name, home = os.path.basename(main), home or os.path.expanduser('~')
-    for f in AUTO_MODE_FILES:
-        try:
-            lines = json.load(open(f.format(home=home, main=main))).get('autoMode', {}).get('environment', [])
-        except (OSError, ValueError, AttributeError):
-            continue
-        if any(name in l and OLD_AUTO_MODEL in l for l in lines if isinstance(l, str)):
-            return True
-    return False
+    """True when an entry covering this repo is the pre-2.33.0 text, which authorized SWE-2 only:
+    a model picked with /coordinate settings would be denied."""
+    return any(auto_mode_covers(l, main) and OLD_AUTO_MODEL in l for l in auto_mode_lines(main, home))
+
+
+def _auto_mode_text(where, worktrees):
+    return (f'**Coordinator workflow (authorized by the owner)**: in {where}, the coordinator session launching '
+            f'`devin -p --permission-mode dangerous --model <any model `devin models list` shows for this '
+            f'account, as set in .claude/coordinate.json or by /coordinate settings for a release> [-r <session>] '
+            f'--prompt-file <briefs>/<task>.md` inside {worktrees}, and launching Claude implementer or review '
+            f'subagents with the Agent tool (opus/sonnet/haiku) on brief files under '
+            f'`.coordinate/releases/*/briefs/`, is the sanctioned, user-approved workflow. It is not Create '
+            f'Unsafe Agents and not Auto-Mode Bypass. Pushes stay the owner\'s.')
 
 
 def auto_mode_line(main):
-    """The `autoMode.environment` entry for the user's settings.json; a session cannot add it."""
-    name = os.path.basename(main)
-    return (f'**Coordinator workflow (authorized by the owner)**: in {name}, the coordinator session launching '
-            f'`devin -p --permission-mode dangerous --model <any model `devin models list` shows for this '
-            f'account, as set in .claude/coordinate.json or by /coordinate settings for a release> [-r <session>] '
-            f'--prompt-file <briefs>/<task>.md` inside this repo\'s sibling worktrees '
-            f'(`{main}-*`), and launching Claude implementer or review subagents with the Agent tool '
-            f'(opus/sonnet/haiku) on brief files under `.coordinate/releases/*/briefs/`, is the sanctioned, '
-            f'user-approved workflow. It is not Create Unsafe Agents and not Auto-Mode Bypass. '
-            f'Pushes stay the owner\'s.')
+    """The `autoMode.environment` entry for this repo; a session cannot add it."""
+    return _auto_mode_text(os.path.basename(main), f'this repo\'s sibling worktrees (`{main}-*`)')
+
+
+def auto_mode_line_generic():
+    """The one entry for every repo with a committed adapter, instead of one per repo."""
+    return _auto_mode_text(GENERIC_SCOPE, 'that repo\'s sibling worktrees (`<repo>-*`)')
+
+
+def settings_file(home=None):
+    """The profile's settings.json, for the lines that tell the owner where to paste."""
+    return os.path.join(claude_dir(home), 'settings.json')
 
 
 def die(msg, code=1):

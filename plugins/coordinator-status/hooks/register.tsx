@@ -95,6 +95,17 @@ async function followSkin($: EngineInterface): Promise<void> {
   }
 }
 
+// XP: quests are build tasks, the work that merges (status.py `quest`, coordinate 2.33.1). Reviews,
+// critiques and the release's own `-` rows stay in the QUEST LOG but never merge, so they would hold
+// the bar short of full on a finished release. Older status.py has no `quest`: count every row but `-`.
+// `merged` (coordinate 2.22.0) counts any MERGED ledger row; older status.py: the latest event is
+// MERGED — false once the OUTCOME row follows it.
+export function questCount(tasks: TaskRow[]): { done: number; total: number } {
+  const quests = tasks.filter(t => t.quest ?? t.task !== '-')
+  const done = quests.filter(t => t.merged ?? t.event.startsWith('MERGED')).length
+  return { done, total: quests.length }
+}
+
 function bar(ratio: number, width: number): [string, string] {
   const full = Math.round(Math.max(0, Math.min(1, ratio)) * width)
   return ['█'.repeat(full), '░'.repeat(width - full)]
@@ -600,10 +611,8 @@ export const register: Register = on => {
     const hp = Math.max(0, 1 - b.tokens / limit)
     const mp = b.window === null ? null : Math.max(0, 1 - b.window / 100)
     const tasks = d?.tasks ?? []
-    // `merged` (coordinate 2.22.0) counts any MERGED ledger row; older status.py: the latest
-    // event is MERGED — false once the OUTCOME row follows it.
-    const done = tasks.filter(t => t.merged ?? t.event.startsWith('MERGED')).length
-    const xp = tasks.length ? done / tasks.length : 0
+    const { done, total } = questCount(tasks)
+    const xp = total ? done / total : 0
     const barW = 16
     const [hpFull, hpEmpty] = bar(hp, barW)
     const [mpFull, mpEmpty] = bar(mp ?? 0, barW)
@@ -680,7 +689,7 @@ export const register: Register = on => {
               <Text bold color="#f5c518">XP </Text>
               <Text color="#f5c518">{xpFull}</Text>
               <Text dimColor>{xpEmpty}</Text>
-              <Text dimColor>{` ${done}/${tasks.length} quests merged`}</Text>
+              <Text dimColor>{` ${done}/${total} quests merged`}</Text>
             </Text>
           </Box>
         </Box>
@@ -851,8 +860,8 @@ export const register: Register = on => {
     const { Box, Text, Button } = $.ui.resolve(e)
     await followSkin($)
     const party = await read($, runs)
-    const merged = d.tasks.filter(t => t.merged ?? t.event.startsWith('MERGED')).length
-    const [full, empty] = bar(d.tasks.length ? merged / d.tasks.length : 0, Math.max(6, Math.min(20, e.props.bodyColumns - 70)))
+    const { done: merged, total } = questCount(d.tasks)
+    const [full, empty] = bar(total ? merged / total : 0, Math.max(6, Math.min(20, e.props.bodyColumns - 70)))
     const claude = party.filter(a => a.status === 'running').length
     const checks = d.checks?.length ?? 0
 
@@ -866,7 +875,7 @@ export const register: Register = on => {
           <Text color="#f5c518">{full}</Text>
           <Text dimColor>{empty}</Text>
         </Text>
-        <Text>{`${merged}/${d.tasks.length} merged`}</Text>
+        <Text>{`${merged}/${total} merged`}</Text>
         <Text color="#4fe3d0">{`devin ${d.devin.length}`}</Text>
         <Text color="#d97757">{`claude ${claude}`}</Text>
         {checks > 0 && <Text color={C.you}>{`👁 ${checks}`}</Text>}

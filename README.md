@@ -7,7 +7,7 @@ merges to your local `main` behind your gates. Implementers are Devin CLI by def
 subagents (Haiku, Sonnet, Opus) when the weekly budget allows. You answer one batch of questions
 per wave, eyeball the UI, and do every push.
 
-<!-- Screenshot: the status pane with several agents running. -->
+![A release run: one question batch, two Devins in parallel, an Opus review, merged to local main](docs/demo/hero.gif)
 
 ## Install
 
@@ -57,11 +57,15 @@ the version it loaded.
 Away mode is the coordinator's own decision policy. It is not Claude Code's auto permission mode,
 and either can be on without the other.
 
+![Away mode: the coordinator records its picks; "away mode off" puts each one in front of you](docs/demo/away.gif)
+
 **Settings.** `/coordinate settings` opens a picker (arrows and space). Plain words work too:
 "build with Opus on this release", "turn the budget off", "use gpt-astra on Devin". A change
 applies to the current release unless you say repo, and you get one line back per change. Devin
 model costs come live from `devin models`: a model that isn't Free there spends your Devin quota,
 and when the quota runs out the coordinator offers the free ones.
+
+![/coordinate settings: pick a preset, or say the change in plain words](docs/demo/settings.gif)
 
 ## The status pane
 

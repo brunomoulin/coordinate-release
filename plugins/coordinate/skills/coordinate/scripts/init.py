@@ -259,8 +259,9 @@ def main():
     builder = ((existing or draft).get('routing') or {}).get('default_builder', 'devin')
     print(f'\nDefault implementer: {builder} (change with /coordinate settings)')
     if not ad.auto_mode_named(main_):
-        print('\nAuto mode: no autoMode.environment entry names this repo. Its owner adds this line to '
-              '~/.claude/settings.json (a session cannot):\n  ' + ad.auto_mode_line(main_))
+        print(f'\nAuto mode: no autoMode.environment entry names this repo. Its owner adds this line to '
+              f'{ad.settings_file()} (a session cannot):\n  ' + ad.auto_mode_line(main_) +
+              '\nor, once for every repo with an adapter:\n  ' + ad.auto_mode_line_generic())
     print('\nThen commit .claude/coordinate.json and the .gitignore line, and run preflight.py.')
 
 

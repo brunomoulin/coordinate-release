@@ -45,8 +45,12 @@ Run these first, before reading the handoff, memory or any code:
    `now.md` is the handoff), and the change doc's `## Tasks`.
    Nothing else from the ledger. On a resume, `python3 $S/ledger.py questions <ledger>` gives the
    parked questions as data (the "Waiting for you" holds among them): open `AskUserQuestion` with
-   them directly. When `now.md` opens with "Decided for you", ask the owner in the same batch which
-   picks they override (one multiSelect question), then `ledger.py review` each (§1 Away mode).
+   them directly. When `now.md` opens with "Decided for you" (or the owner turns away mode off), ask
+   the owner in the same batch which picks they override: multiSelect, every unreviewed pick listed.
+   A question takes at most 4 options, so split the picks four per question (A1-A4, A5-A8, ...);
+   past four questions, name the rest in the question text and take overrides by id. Then
+   `ledger.py review` each, unticked ones `ok` (§1 Away mode). In the 0.3 demo, 5 picks in one
+   question left A3 out.
    "Away mode is on" there means you stay in it.
    `status.py` (step 4) prints `WAKE SESSION RUNNING` when a woken background session is still
    coordinating this release: do not start working beside it. Tell the owner, and wait for its park or

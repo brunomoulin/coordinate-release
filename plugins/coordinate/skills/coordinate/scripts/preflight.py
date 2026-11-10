@@ -15,16 +15,26 @@ REQUIRED_KEYS = ['gates']
 
 
 def allow_rules(main):
-    found, files = set(), [
-        '~/.claude/settings.json', '~/.claude/settings.local.json',
-        f'{main}/.claude/settings.json', f'{main}/.claude/settings.local.json']
-    for f in files:
-        p = os.path.expanduser(f)
+    found, files = set(), [f.format(claude=ad.claude_dir(), main=main) for f in ad.AUTO_MODE_FILES]
+    for p in files:
         try:
             found |= set(json.load(open(p)).get('permissions', {}).get('allow', []))
         except (OSError, ValueError):
             pass
     return found
+
+
+def allowed(rule, have):
+    """A needed `Bash(<cmd> *)` rule is present, or a broader one covers it: `Bash(devin:*)`,
+    `Bash(devin *)`, `Bash(*)`, `Bash` (the demo profile ran on `Bash(devin:*)` alone)."""
+    if rule in have or 'Bash' in have or 'Bash(*)' in have:
+        return True
+    words = rule[len('Bash('):-len(' *)')].split()
+    for n in range(1, len(words)):
+        prefix = ' '.join(words[:n])
+        if f'Bash({prefix}:*)' in have or f'Bash({prefix} *)' in have:
+            return True
+    return False
 
 
 def inotify_limit():
@@ -75,8 +85,9 @@ def auto_mode_warning(main, home=None):
     if ad.auto_mode_named(main, home):
         return None
     return (f'no `autoMode.environment` entry names {os.path.basename(main)}: auto mode may deny the '
-            f'launches as "Auto-Mode Bypass". The owner adds this line to ~/.claude/settings.json '
-            f'(autoMode.environment): {ad.auto_mode_line(main)}')
+            f'launches as "Auto-Mode Bypass". The owner adds this line to {ad.settings_file(home)} '
+            f'(autoMode.environment): {ad.auto_mode_line(main)} (or, once for every repo with an adapter: '
+            f'{ad.auto_mode_line_generic()})')
 
 
 def archive_problem(a):
@@ -118,9 +129,10 @@ def main():
     if w := auto_mode_warning(main_):
         warns.append(w)
     have = allow_rules(main_)
-    missing = [r for r in NEEDED_ALLOW if r not in have]
+    missing = [r for r in NEEDED_ALLOW if not allowed(r, have)]
     if missing:
-        fails.append('allow rules missing. The owner adds to ~/.claude/settings.local.json "permissions.allow": '
+        local = os.path.join(ad.claude_dir(), 'settings.local.json')
+        fails.append(f'allow rules missing. The owner adds to {local} "permissions.allow": '
                      + ', '.join(json.dumps(m) for m in missing))
     f, w = devin_checks(a)
     fails += f

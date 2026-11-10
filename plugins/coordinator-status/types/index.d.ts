@@ -19,7 +19,7 @@ export type Worktree = {
 }
 // `merged`: any MERGED ledger row for the task (coordinate 2.22.0's status.py; the latest event
 // is usually the OUTCOME row that follows a merge). Absent on older status.py: event MERGED.
-export type TaskRow = { time: string; task: string; who: string; event: string; merged?: boolean }
+export type TaskRow = { time: string; task: string; who: string; event: string; merged?: boolean; quest?: boolean }
 export type StatusData = {
   release: string | null
   devin: DevinRun[]

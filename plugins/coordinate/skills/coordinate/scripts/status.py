@@ -240,7 +240,7 @@ def as_json(a, main_, release):
     if release:
         lf = ad.ledger_file(a, release)
         if os.path.exists(lf):
-            last, merged = {}, set()
+            last, merged, route = {}, set(), {}
             for t, task, who, ev in lg.rows(lf):
                 task, ev = task.strip(), ev.strip()
                 last[task] = {'time': t, 'task': task, 'who': who.strip(), 'event': ev}
@@ -248,8 +248,13 @@ def as_json(a, main_, release):
                 # OUTCOME row merge.py writes after it becomes the task's latest event).
                 if ev.startswith('MERGED'):
                     merged.add(task)
-            for task in merged:
-                last[task]['merged'] = True
+                if m := re.match(r'ROUTE -> (\S+)', ev):
+                    route[task] = m.group(1)
+            for task, row in last.items():
+                row['merged'] = task in merged
+                # A quest is work that merges: the pane's XP counts these. Reviews, critiques and
+                # eyeballs (their latest ROUTE) and the release's own rows (task `-`) are not.
+                row['quest'] = task != '-' and (task not in route or route[task] in budget.KIND_ROUTES['build'])
             tasks = sorted(last.values(), key=lambda r: r['time'])
     # The mod's 👁 marker: eyeball checks still waiting on the owner (feedback is a fix round, not
     # their queue; `fixed` returns it as `recheck`). An agent verdict does not close one.

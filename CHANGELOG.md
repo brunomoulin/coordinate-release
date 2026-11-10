@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.33.1 (2026-11-09)
+
+Fixes found while recording the README demos. Mod: coordinator-status 0.11.1.
+
+- **A second Claude profile.** The scripts read Claude Code's settings and transcripts from
+  `CLAUDE_CONFIG_DIR` when it is set, not always `~/.claude`. Before, preflight missed that
+  profile's `autoMode` line and allow rules, and `session.py` measured another session's transcript
+  (a fresh demo session reported 148k context). Preflight also accepts a broader allow rule
+  (`Bash(devin:*)`, `Bash(devin *)`) for `devin -p`, and names the profile's settings file.
+- **One autoMode line for every repo.** An `autoMode.environment` entry for "any repo with a
+  committed `.claude/coordinate.json`" now counts for every repo. Preflight and init print it next
+  to the per-repo line, with the profile's own settings path.
+- **XP counts builds.** `status.py --json` marks each task `quest`: a build, the work that merges.
+  Reviews, critiques, eyeballs and the release's own `-` rows are not, so the pane's XP bar and the
+  band read 2/2 at the end of a two-task release, not 2/5. The QUEST LOG still lists every row.
+- **Every away pick gets reviewed.** `AskUserQuestion` takes at most 4 options, so SKILL.md splits
+  the override question four picks per question. One question over 5 picks left A3 out.
+
 ## 2.33.0 (2026-11-09)
 
 - **`/coordinate settings`.** A picker on `AskUserQuestion`: presets Balanced (today's defaults),

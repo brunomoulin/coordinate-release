@@ -21,10 +21,10 @@ import budget
 def transcript():
     sid = os.environ.get('CLAUDE_CODE_SESSION_ID')
     if sid:
-        hits = glob.glob(os.path.expanduser(f'~/.claude/projects/*/{sid}.jsonl'))
+        hits = glob.glob(os.path.join(ad.claude_dir(), 'projects', '*', f'{sid}.jsonl'))
         if hits:
             return hits[0]
-    files = glob.glob(os.path.expanduser('~/.claude/projects/*/*.jsonl'))
+    files = glob.glob(os.path.join(ad.claude_dir(), 'projects', '*', '*.jsonl'))
     return max(files, key=os.path.getmtime) if files else None
 
 

@@ -1,5 +1,6 @@
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
+import { questCount } from './register.js'
 
 const STATUS = {
   release: '2.6.2',
@@ -447,4 +448,18 @@ test('skin: a skin made with the skins mod colours the pane; built-in or none ke
   expect(await color(/^HP $/)).toBe('#e06c75')
   skin = 'nord'
   expect(await color(/^HP $/)).toBe('#ff5f5f')
+})
+
+test('xp: quests are builds; reviews and the release rows stay out of the count', async () => {
+  const row = (task: string, event: string, extra: object = {}) => ({ time: '11-09 21:00', task, who: 'c', event, ...extra })
+  // 0.2 demo: two builds merged, three reviews and an AWAY row: 2/2, not 2/5.
+  expect(questCount([
+    row('median', 'OUTCOME', { merged: true, quest: true }),
+    row('json', 'OUTCOME', { merged: true, quest: true }),
+    row('review-a', 'DONE bugs=1', { merged: false, quest: false }),
+    row('review-b', 'DONE bugs=0', { merged: false, quest: false }),
+    row('-', 'AWAY on', { merged: false, quest: false }),
+  ])).toEqual({ done: 2, total: 2 })
+  // Older status.py, no `quest`: every row but the release's own `-` rows.
+  expect(questCount([row('7', 'MERGED abc'), row('8', 'LAUNCHED'), row('-', 'PARKED')])).toEqual({ done: 1, total: 2 })
 })
