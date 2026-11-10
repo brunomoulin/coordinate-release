@@ -336,8 +336,11 @@ session never showed there). Woken, end with a normal park whose first lines are
 (under 10: what waits on them, what merged, what still runs; `park` puts the away mode lists above
 them), send `now.md` with SendUserFile, then a PushNotification that leads with what waits on
 them ("2 decided for you, 1 waiting"). The park is the summary: there is no
-second file (the owner, 2026-10-26). It skips while your session is still open
-in a terminal, so `/exit` right after arming.
+second file (the owner, 2026-10-26). Last of all (after arming the next wake, if you arm one), end
+yourself with `python3 $S/wake.py --stop-self` (`claude stop` on this background session; it
+never stops an interactive one): a woken session that parks and stays open blocks the next wake
+(2026-11-10: all 8 tries skipped). It skips while your session is still open in a
+terminal, so `/exit` right after arming. A wake that gives up sends a desktop notification.
 
 ## 9. Close-out, Push, Wrap-up
 

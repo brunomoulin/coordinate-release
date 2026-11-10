@@ -2,6 +2,7 @@
 
   wake.py <repo> --release R --session <id> [--fresh | --fork-session] [--after-reset]
           [--after-work] [--max-tries 8] [--retry-minutes 15] [--dry-run] [--foreground]
+  wake.py --stop-self   (a woken background session ends itself after its park)
 
 Arming refuses (exit 2) while a `devin -p` or `chain.py` of this repo runs under a Claude session:
 the `/exit` the wake needs kills those. A chain detaches itself, so it and its Devins keep running
@@ -33,7 +34,7 @@ If a `claude` process still has session <id> open, the try is skipped (a second 
 the transcript; with --fresh, two coordinators would run the release) unless --fork-session says
 to resume a copy.
 """
-import argparse, atexit, datetime as dt, json, os, re, subprocess, sys, time
+import argparse, atexit, datetime as dt, json, os, re, shutil, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import adapter as ad
 import budget
@@ -63,11 +64,17 @@ def reset_epoch():
 
 
 def open_session(sid):
-    """Command lines of other claude processes holding this session."""
+    """Command lines of other claude processes holding this session. Only `claude` itself counts:
+    a shell whose command line carries the id (a parked session's leftover Bash task) blocked all
+    8 tries of a real wake (2026-11-10)."""
     r = subprocess.run(['pgrep', '-af', f'claude.*{re.escape(sid)}'], capture_output=True, text=True)
     mine = {str(os.getpid()), str(os.getppid())}
-    return [l for l in r.stdout.splitlines()
-            if l.split(None, 1)[0] not in mine and 'wake.py' not in l]
+    held = []
+    for l in r.stdout.splitlines():
+        parts = l.split()
+        if len(parts) > 1 and parts[0] not in mine and os.path.basename(parts[1]) == 'claude':
+            held.append(l)
+    return held
 
 
 def chain_procs():
@@ -156,7 +163,34 @@ def prompt(release, park):
             'When you stop (done, parked, or waiting on the owner), park as usual with `ledger.py park`, '
             'the park opening with "For you" in under 10 lines: what waits on the owner, what merged, '
             f'what still runs. Then {send} (status proactive), and a PushNotification that leads '
-            'with what waits on the owner.')
+            'with what waits on the owner. Last of all (after arming a wake, if you arm one), end this '
+            f'background session so it does not block the next wake: `python3 {os.path.abspath(__file__)} '
+            '--stop-self`.')
+
+
+def stop_self():
+    """Stop the background session this runs in (`claude stop`), so a parked woken session ends
+    instead of holding its id and blocking the next wake (2026-11-10). Never stops an
+    interactive session: the owner ends those."""
+    sid, pid = os.environ.get('CLAUDE_CODE_SESSION_ID', ''), os.environ.get('CLAUDE_PID', '')
+    row = next((x for x in status.agent_rows() or []
+                if (sid and x.get('sessionId') == sid) or (pid and str(x.get('pid')) == pid)), None)
+    if not row:
+        print('not listed in `claude agents`: nothing stopped')
+        return 1
+    if row.get('kind') == 'interactive':
+        print('an interactive session: not stopped (the owner ends it with /exit)')
+        return 0
+    bid = row.get('id') or str(row.get('sessionId', ''))[:8]
+    print(f'stopping background session {bid}')
+    subprocess.run(['claude', 'stop', bid], capture_output=True, text=True)
+    return 0
+
+
+def notify(msg):
+    """A desktop notification for a wake that gave up; the log alone went unseen (2026-11-10)."""
+    if shutil.which('notify-send'):
+        subprocess.run(['notify-send', '-u', 'critical', 'coordinate wake', msg], capture_output=True)
 
 
 def command(release, session, fresh, fork, park):
@@ -216,6 +250,8 @@ def sleep_until(f, t, why):
 
 
 def main():
+    if sys.argv[1:] == ['--stop-self']:
+        return stop_self()
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('repo')
     p.add_argument('--release', required=True)
@@ -267,7 +303,9 @@ def main():
     if args.after_work and not wait_for_work(f, a):
         return 1
 
+    held = []
     for n in range(1, args.max_tries + 1):
+        held = []
         if not args.fork_session and (held := open_session(args.session)):
             log(f, f'try {n}: session still open, skipped ({held[0][:80]})')
         else:
@@ -287,6 +325,8 @@ def main():
         if n < args.max_tries:
             sleep_until(f, time.time() + args.retry_minutes * 60, f'retry {n + 1} of {args.max_tries}')
     log(f, f'gave up after {args.max_tries} tries')
+    notify(f'wake {args.release} gave up after {args.max_tries} tries'
+           + (f': session {args.session[:8]} still open' if held else '') + f'. Log: {path}')
     return 1
 
 

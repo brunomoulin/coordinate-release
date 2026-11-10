@@ -178,5 +178,60 @@ class LiveRuns(unittest.TestCase):
         self.assertIn('--fresh', args[0])
 
 
+class OpenSession(unittest.TestCase):
+    """2026-11-10: a parked session's leftover bash child carried the id and blocked 8 tries."""
+    def held(self, out):
+        with mock.patch.object(wake.subprocess, 'run', return_value=mock.Mock(stdout=out)):
+            return wake.open_session('60c3ef0d')
+
+    def test_a_claude_process_holds_the_session(self):
+        self.assertTrue(self.held('42 claude -r 60c3ef0d-aa\n'))
+        self.assertTrue(self.held('43 /home/u/.local/bin/claude --resume 60c3ef0d-aa\n'))
+
+    def test_a_shell_whose_command_line_carries_the_id_does_not(self):
+        self.assertEqual(self.held('2488206 /bin/bash -c source snap.sh && claude stop 60c3ef0d\n'), [])
+
+
+class StopSelf(unittest.TestCase):
+    """A woken session ends itself after its park, so the next wake is not blocked by it."""
+    def stop(self, rows, env):
+        with mock.patch.object(wake.status, 'agent_rows', return_value=rows), \
+                mock.patch.dict(os.environ, env, clear=False), \
+                mock.patch.object(wake.subprocess, 'run') as run, redirect_stdout(io.StringIO()):
+            code = wake.stop_self()
+        return code, run
+
+    def test_a_background_session_stops_itself(self):
+        rows = [{'pid': 7, 'sessionId': 'da1c7991-aaaa', 'kind': 'background', 'status': 'idle'}]
+        code, run = self.stop(rows, {'CLAUDE_CODE_SESSION_ID': 'da1c7991-aaaa', 'CLAUDE_PID': '7'})
+        self.assertEqual(code, 0)
+        self.assertEqual(run.call_args[0][0], ['claude', 'stop', 'da1c7991'])
+
+    def test_an_interactive_session_is_never_stopped(self):
+        rows = [{'pid': 7, 'sessionId': 'da1c7991-aaaa', 'kind': 'interactive', 'status': 'busy'}]
+        code, run = self.stop(rows, {'CLAUDE_CODE_SESSION_ID': 'da1c7991-aaaa', 'CLAUDE_PID': '7'})
+        run.assert_not_called()
+
+    def test_the_prompt_ends_with_the_stop(self):
+        p = wake.prompt('2.11.0', SUMMARY)
+        self.assertIn('--stop-self', p)
+        self.assertGreater(p.index('--stop-self'), p.index('PushNotification'))
+
+
+class GiveUp(unittest.TestCase):
+    def test_a_wake_that_gives_up_tells_the_desktop(self):
+        with mock.patch.object(wake.shutil, 'which', return_value='/usr/bin/notify-send'), \
+                mock.patch.object(wake.subprocess, 'run') as run:
+            wake.notify('wake 2.12.0 gave up')
+        self.assertEqual(run.call_args[0][0][0], 'notify-send')
+        self.assertIn('wake 2.12.0 gave up', run.call_args[0][0])
+
+    def test_no_notify_send_is_not_an_error(self):
+        with mock.patch.object(wake.shutil, 'which', return_value=None), \
+                mock.patch.object(wake.subprocess, 'run') as run:
+            wake.notify('x')
+        run.assert_not_called()
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.33.2 (2026-11-10)
+
+Wake fixes from a real overnight run (2026-11-10), where a woken session parked, stayed open, and
+blocked all 8 tries of the next wake.
+
+- A woken session ends itself after its park: the wake prompt and SKILL.md §8 end with
+  `wake.py --stop-self`, which runs `claude stop` on its own background session (never on an
+  interactive one).
+- `open_session` counts only `claude` processes, not a shell whose command line carries the
+  session id (the leftover Bash task that blocked the wake).
+- A wake that gives up after its last try sends a desktop notification (`notify-send`) naming the
+  session that held it, instead of exiting with only a log line.
+
 ## 2.33.1 (2026-11-09)
 
 Fixes found while recording the README demos. Mod: coordinator-status 0.11.1.
