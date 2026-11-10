@@ -13,7 +13,8 @@
 answers. A check is open until one of those lands; an OK moves the check's lines to the release's
 history.md, so the file holds only what still waits on them. Every coordinator report ends with
 the `waiting` line instead of repeating the checks; the mod's 👁 marker reads the same file. A
-release begun before 2.12.0 keeps `.coordinate/eyeball/<R>.md`, append only.
+release begun before 2.12.0 keeps `.coordinate/eyeball/<R>.md`, append only. The owner may append
+`- OK <id> | <MM-DD HH:MM> | <note>` or `- FEEDBACK <id> | ...` by hand: the newest line decides.
 
 Machine eyeball (2.18.0): an agent with a browser checks what it can and writes a report; `import`
 reads its `## #<id> PASS|FAIL|PARTIAL|NEEDS OWNER` headings into AGENT lines, states `agent-pass`,
@@ -198,4 +199,11 @@ def run(args):
             print('no verdict in the report for: ' + ', '.join(f'#{i}' for i in missing))
         print(waiting_line(f, load(f)))
     else:
+        # An OK the owner wrote in the file by hand (SKILL.md §6): tidy it as `checks ok` would.
+        by_hand = {i for i, c in checks.items() if c['state'] == 'ok'}
+        if by_hand:
+            passed(f, by_hand)
+            for i in sorted(by_hand):
+                print(f'#{i} ok in the file, moved to history')
+            checks = load(f)
         print(waiting_line(f, checks))

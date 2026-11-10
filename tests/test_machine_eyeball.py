@@ -97,6 +97,18 @@ class MachineEyeball(unittest.TestCase):
         self.assertNotIn(4, ck.load(self.f))
         self.assertEqual(ck.waiting_line(self.f, ck.load(self.f)), f'waiting on you: 4 open · {self.f}')
 
+    def test_waiting_takes_answers_written_in_the_file(self):
+        # The owner answered in eyeball.md, not the chat: the next report sees it and tidies the OK.
+        with open(self.f, 'a') as fh:
+            fh.write('- OK 1 | 11-10 19:12 | looks right\n- FEEDBACK 2 | 11-10 19:13 | wrong colour\n')
+        out = io.StringIO()
+        with redirect_stdout(out):
+            ck.run(['waiting', self.root, '--release', '2.12.0'])
+        self.assertIn('#1 ok in the file, moved to history', out.getvalue())
+        self.assertIn('in a fix round: 1', out.getvalue())
+        self.assertNotIn(1, ck.load(self.f))
+        self.assertIn('looks right', open(os.path.join(os.path.dirname(self.f), 'history.md')).read())
+
     def test_verify_brief(self):
         quiet(ck.run, ['import', self.root, '--release', '2.12.0', self.report])
         quiet(ck.run, ['feedback', self.root, '--release', '2.12.0', '4', 'the prompt shows on a clean form'])

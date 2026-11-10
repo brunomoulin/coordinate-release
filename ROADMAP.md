@@ -5,7 +5,7 @@ Where coordinate stands and what comes next. What shipped, release by release, i
 
 ## Where we are
 
-- **Skill 2.33.0, mod `coordinator-status` 0.11.0.** The skill has run several real releases end to
+- **Skill 2.34.0, mod `coordinator-status` 0.11.1.** The skill has run several real releases end to
   end: planning waves, Devin and Claude implementers in worktrees, scripted verification, routed
   reviews, gated merges, close-out. Python 3.10+ standard library only; no server.
 - The mod is optional. Without it, `budget.py` treats the 5-hour and 7-day signals as unknown.
@@ -13,9 +13,9 @@ Where coordinate stands and what comes next. What shipped, release by release, i
 ## Next
 
 1. **CI:** a GitHub Actions workflow that runs `python3 -m unittest discover tests` on every push.
-2. **Wake reliability.** `wake.py` skips while the parked session is still open, so a session left
-   open overnight never wakes; it should say so when it arms, notify when the work ends, and treat
-   a long-idle session as closed. `status.py` should report a wake session that died (no control
+2. **Wake reliability.** Since 2.33.2 a woken session ends itself after its park and a wake that
+   gives up notifies the desktop. Still open: with `--fresh`, stop a held session that is idle
+   instead of skipping it, and have `status.py` report a wake session that died (no control
    socket) as stale, not running.
 3. **Claude builds in auto mode.** A PreToolUse hook that rewrites Agent prompts makes the
    auto-mode classifier refuse the call. Reviews already avoid this through `claude_review.py`

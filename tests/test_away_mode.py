@@ -97,6 +97,39 @@ class AwayMode(unittest.TestCase):
             quiet(lg.decide, f, 'x', 'y', 'z', auto=True)
 
 
+class AwayEyeball(unittest.TestCase):
+    """Away mode puts up no eyeball server for the owner; `away off` names the checks that waited."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.d = os.path.join(self.tmp.name, '2.12.0')
+        quiet(lg.init, self.d, '2.12.0')
+        self.f = lg.resolve(self.d)
+        quiet(lg.set_away, self.f, True)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def off(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            lg.set_away(self.f, False)
+        return out.getvalue()
+
+    def test_back_lists_the_checks_that_waited(self):
+        with open(os.path.join(self.d, 'eyeball.md'), 'w') as fh:
+            fh.write('- ADD 10 | 11-10 18:20 | 524 | eyeball stack | check in\n'
+                     '- ADD 11 | 11-10 18:42 | 556 | eyeball stack | roster\n'
+                     '- OK 11 | 11-10 19:12 | looks right\n'
+                     '- ADD 12 | 11-10 18:50 | 557 | eyeball stack | badge\n'
+                     '- FEEDBACK 12 | 11-10 19:13 | wrong colour\n')
+        out = self.off()
+        self.assertIn('1 eyeball check waits on you (#10)', out)
+        self.assertIn('eyeball.py', out)
+
+    def test_back_with_no_checks_says_nothing_of_eyeballs(self):
+        self.assertNotIn('eyeball', self.off())
+
+
 class AwayBadge(unittest.TestCase):
     """status.py --json `away`, which the coordinator-status pane shows as a badge."""
     def test_on_off_and_no_release(self):

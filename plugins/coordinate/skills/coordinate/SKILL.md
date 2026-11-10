@@ -95,7 +95,8 @@ auto mode before 2.31.0, renamed so it is not mistaken for Claude Code's auto pe
   keep going. That night's 6 picks were sound; one (468) the coordinator reversed itself after a
   review, which is the system working.
 - Away mode changes who decides, nothing else: budget gates, fit checks, the hold on merges with
-  open DB questions, reviews and eyeball checks all apply as in a watched session.
+  open DB questions, reviews and eyeball checks all apply as in a watched session. One thing
+  waits for them instead: the eyeball server (§6, "Away").
 
 Each park puts **Decided for you** (one line per unreviewed pick, with its revert cost) and
 **Waiting for you** (the holds, as parked questions) at the top of `now.md` by itself, above your
@@ -261,6 +262,19 @@ the release. They set it on 2.10.0's panels before r11, which came back clean.
    fix round: the check counts "in a fix round", not "waiting on you", until you record the fix
    with `checks fixed <id> ["<what landed>"]`, which moves it to `recheck` — their again, and
    `checks ok <id>` still closes it. A task with an open check does not merge.
+   The owner may answer in the file instead of the chat, so a running session is not interrupted:
+   `- OK <id> | <MM-DD HH:MM> | <note>` or `- FEEDBACK <id> | <MM-DD HH:MM> | <their words>`
+   appended to `eyeball.md`; the newest line per check decides. `checks waiting` moves a
+   hand-written OK to history.md and names it; hand-written feedback starts a fix round as if they
+   had said it.
+
+   **Away**: no eyeball server for the owner. Record the checks as usual, but bring the eyeball
+   stack up only for a machine eyeball run (below) and take it down when its report is imported;
+   do not keep a server up for them or restack it for each new check (2.12.0, 2026-11-10: servers
+   torn down and rebuilt per check all evening, none of them seen). When they are back (`ledger.py
+   away <ledger> off`, which prints the checks that waited, or their first message in the
+   session), fold every branch with an open check into one stack, start one server, and report
+   `checks waiting`.
 
    **Machine eyeball first**, once the eyeball stack runs: `python3 $S/eyeball.py verify <repo>
    --release R [--url U] [<id>...]` writes the brief (`references/eyeball-brief-template.md`)

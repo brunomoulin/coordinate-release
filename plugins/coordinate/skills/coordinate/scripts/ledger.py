@@ -310,6 +310,19 @@ def set_away(f, on):
                   'the owner (decide --waits, SKILL.md §Away mode)',
                'a watched session: every choice waits for the owner', 'ledger.py away <ledger> off', by='owner')
     refresh_now(f)
+    if not on:
+        back_eyeballs(f)
+
+
+def back_eyeballs(f):
+    """Away mode puts up no eyeball server for the owner (SKILL.md §6): name what waited for them, so
+    the coordinator folds the stack and starts one server now that they are back."""
+    import checks  # checks imports this module
+    open_ = [i for i, c in checks.load(sibling(f, 'eyeball')).items() if c['state'] in checks.YOU]
+    if open_:
+        print(f'{len(open_)} eyeball check{"s" if len(open_) > 1 else ""} wait{"" if len(open_) > 1 else "s"} '
+              f'on you ({", ".join(f"#{i}" for i in open_)}): fold their branches '
+              f'(eyeball.py <repo> --release R <branch>...) and start one server (SKILL.md §6)')
 
 
 def next_id(f, letter):

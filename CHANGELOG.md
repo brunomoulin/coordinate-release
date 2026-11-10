@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.34.0 (2026-11-10)
+
+Away mode stops putting up eyeball servers nobody looks at. In 2.12.0's away evening the
+coordinator tore down and rebuilt the eyeball stack for each new check, all unseen until morning.
+
+- Away: the eyeball stack comes up only for a machine eyeball run and goes down after its report
+  is imported. When the owner is back (`ledger.py away <ledger> off` or their first message), one
+  fold of every branch with an open check, one server.
+- `ledger.py away <ledger> off` prints the eyeball checks that waited ("1 eyeball check waits on
+  you (#10): fold their branches ... and start one server").
+- The owner can answer checks in `eyeball.md` without interrupting a running session:
+  `- OK <id> | <MM-DD HH:MM> | <note>` or `- FEEDBACK <id> | ...`. `checks waiting` moves a
+  hand-written OK to history.md and names it.
+
 ## 2.33.3 (2026-11-10)
 
 Test runs leave the machine usable. Two runs at once, each sizing its own worker pool, took all
