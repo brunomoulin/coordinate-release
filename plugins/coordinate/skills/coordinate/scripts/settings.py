@@ -34,6 +34,9 @@ ROUTE_WHY = 'unset: the budget posture decides; on: allowed whatever the posture
 KNOBS = {
     'routing.default_builder': {'group': WHO, 'label': 'Who builds first', 'choices': ['devin', 'sonnet', 'haiku', 'opus'],
                                 'why': 'Devin SWE-2 is free with a Devin subscription; without one, Sonnet'},
+    'system_one.mode': {'group': WHO, 'label': 'System One risk log', 'choices': ['off', 'shadow'],
+                        'why': 'shadow: each build brief is sent to TypeSafe Jev (hosted) and its answers '
+                               'are logged beside the outcome; no route changes'},
     'devin.model': {'group': WHO, 'label': 'Devin build model', 'kind': 'model',
                     'why': 'a free model keeps builds off the Devin quota; a paid one spends it'},
     'devin.fusion_model': {'group': WHO, 'label': 'Devin Fusion model', 'kind': 'model',

@@ -50,6 +50,7 @@ DEFAULTS = {
     'devin': {'model': 'swe-2-high',
               'fusion_model': 'fusion-claude-opus-5-5-high-sidekick-swe-2-medium'},
     'routing': {'default_builder': 'devin'},
+    'system_one': {'mode': 'off'},
 }
 # Presets for /coordinate settings: dotted keys over DEFAULTS. The only place a preset is defined.
 CLAUDE_ROUTES = ('haiku_implement', 'sonnet_implement', 'opus_implement', 'opus_review', 'sonnet_review',

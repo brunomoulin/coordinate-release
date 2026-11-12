@@ -1,0 +1,77 @@
+{
+  "name": "coordinate-risk",
+  "version": 1,
+  "model": "jev-latest",
+  "questions": {
+    "db_schema": {
+      "type": "noul",
+      "instructions": "Does `brief` ask for a change to a database schema, migration or stored data?"
+    },
+    "ui_visible": {
+      "type": "noul",
+      "instructions": "Does `brief` ask for a change a person would see on screen?"
+    },
+    "front_and_back": {
+      "type": "noul",
+      "instructions": "Does `brief` ask for changes in both user-interface code and server or storage code?"
+    },
+    "names_files": {
+      "type": "noul",
+      "instructions": "Does `brief` name the exact files to change?",
+      "criteria": {
+        "true": "Gives file paths for the code to edit",
+        "false": "Describes the change without file paths"
+      }
+    },
+    "names_test": {
+      "type": "noul",
+      "instructions": "Does `brief` name a specific test or command that proves the work is done?"
+    },
+    "is_bug_fix": {
+      "type": "noul",
+      "instructions": "Is the task in `brief` a fix for something that behaves wrongly today?",
+      "criteria": {
+        "true": "Repairs existing behaviour",
+        "false": "Adds or changes a feature, docs or tooling"
+      }
+    },
+    "open_choice": {
+      "type": "noul",
+      "instructions": "Does `brief` leave a design choice for the implementer to make?",
+      "criteria": {
+        "true": "Says to pick, decide or propose an approach",
+        "false": "Specifies the approach to take"
+      }
+    },
+    "timing": {
+      "type": "noul",
+      "instructions": "Does the task in `brief` involve timing, concurrency, async events or races?"
+    },
+    "auth": {
+      "type": "noul",
+      "instructions": "Does the task in `brief` touch login, permissions or access control?"
+    },
+    "external_api": {
+      "type": "noul",
+      "instructions": "Does the task in `brief` depend on the behaviour of an outside service, browser API or third-party page?"
+    },
+    "many_parts": {
+      "type": "noul",
+      "instructions": "Does `brief` list four or more separate things to implement?"
+    },
+    "new_tests": {
+      "type": "noul",
+      "instructions": "Does `brief` ask the implementer to write new automated tests?"
+    },
+    "size": {
+      "type": "score",
+      "instructions": "How much code does the task in `brief` need?",
+      "criteria": [
+        "A few lines in one file",
+        "One function or component",
+        "Several functions across a few files",
+        "A new module or many files"
+      ]
+    }
+  }
+}

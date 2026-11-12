@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.35.0 (2026-11-12)
+
+A shadow log for System One models (small classifiers that answer typed questions with calibrated
+probabilities). It measures whether such a model can predict which builds a review will find bugs
+in. It routes nothing.
+
+- New setting `system_one.mode`: `off` (default) or `shadow`. In `shadow`, `s1_shadow.py` sends each
+  first-round build brief to TypeSafe's hosted Jev with 13 questions
+  (`references/s1-coordinate-risk.json`) and adds an `S1` ledger row under the task. The task's
+  OUTCOME row is the label.
+- Opt-in because the brief's text leaves the machine. Needs `TYPESAFE_API_KEY`.
+- A missing key, no network or a refused request gives an `S1 skipped` row and never holds a launch.
+
 ## 2.34.1 (2026-11-12)
 
 context-mode 2.x changed what it does to workers. Checked live on 2.1.9 with Claude Code 2.1.322.

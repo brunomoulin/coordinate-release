@@ -182,6 +182,11 @@ pick stays in `decisions.md` after its task merges. `ledger.py decisions <ledger
    row gets one inferred from it. A review or critique is its own task (`review-<ids>`,
    `critique-<id>`), never the build's id, or the close-out counts it as a build round.
 
+When `system_one.mode` is `shadow` (off by default; it sends the brief's text to a hosted model),
+run `python3 $S/s1_shadow.py <repo> --release R <task>=<brief>` once per first-round build brief,
+before its launch. It adds an `S1` row and changes no route; a failed call is a `S1 skipped` row,
+never a reason to wait.
+
 Never fork yourself as an implementer: a fork shares your limit and dies with you.
 
 ## 4. Verify (every reply; a claim is not evidence)
