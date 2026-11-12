@@ -5,7 +5,7 @@ Where coordinate stands and what comes next. What shipped, release by release, i
 
 ## Where we are
 
-- **Skill 2.34.0, mod `coordinator-status` 0.11.1.** The skill has run several real releases end to
+- **Skill 2.34.1, mod `coordinator-status` 0.11.1.** The skill has run several real releases end to
   end: planning waves, Devin and Claude implementers in worktrees, scripted verification, routed
   reviews, gated merges, close-out. Python 3.10+ standard library only; no server.
 - The mod is optional. Without it, `budget.py` treats the 5-hour and 7-day signals as unknown.
@@ -17,11 +17,8 @@ Where coordinate stands and what comes next. What shipped, release by release, i
    gives up notifies the desktop. Still open: with `--fresh`, stop a held session that is idle
    instead of skipping it, and have `status.py` report a wake session that died (no control
    socket) as stale, not running.
-3. **Claude builds in auto mode.** A PreToolUse hook that rewrites Agent prompts makes the
-   auto-mode classifier refuse the call. Reviews already avoid this through `claude_review.py`
-   (`claude -p`); builds need the same path.
-4. **`chain.py` and `budget.py` usage lines** that name the task-label rule and the route names.
-5. **Optional `hc` runner** (herdr-core): an adapter key `runner: "chain" | "hc"` and
+3. **`chain.py` and `budget.py` usage lines** that name the task-label rule and the route names.
+4. **Optional `hc` runner** (herdr-core): an adapter key `runner: "chain" | "hc"` and
    `scripts/hc_runner.py`, so workers keep running past the coordinator's session and `wake.py`
    can reattach to them. `chain.py` stays the default until `hc` has run a few real releases.
 

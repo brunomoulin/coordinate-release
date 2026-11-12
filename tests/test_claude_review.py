@@ -86,6 +86,9 @@ class Run(unittest.TestCase):
         tools = argv[argv.index('--allowedTools') + 1]
         self.assertIn('Bash(rtk git:*)', tools)  # rtk rewrites git; without it no git diff
         self.assertIn('Write', tools)
+        # context-mode off: its 2.x leaves excerpts of any tool output over 4 KB (a git diff)
+        settings = json.loads(argv[argv.index('--settings') + 1])
+        self.assertIs(settings['enabledPlugins']['context-mode@context-mode'], False)
         route, launched, exited = self.rows()
         self.assertIn('ROUTE -> sonnet_review', route[2])  # inferred from who=sonnet, as closeout does
         self.assertEqual(launched[:2], ('review-T87', 'sonnet'))

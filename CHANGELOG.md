@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.34.1 (2026-11-12)
+
+context-mode 2.x changed what it does to workers. Checked live on 2.1.9 with Claude Code 2.1.322.
+
+- `claude_review.py` runs its reviewer with context-mode off (`--settings`). With it on, the
+  reviewer got about 12 lines of a 10 KB `git show` and had no `ctx_search` tool to fetch the
+  rest. With it off, the whole diff arrives.
+- SKILL.md §3: `claude_review.py` is the Claude reviewer when a hook cuts tool output, not only
+  when `Agent` is refused. An `Agent` subagent gets the same cut output.
+- `Agent` is accepted in auto mode again: context-mode 2.x no longer rewrites Agent prompts, so
+  Claude builds in auto mode are unblocked.
+
 ## 2.34.0 (2026-11-10)
 
 Away mode stops putting up eyeball servers nobody looks at. In 2.12.0's away evening the

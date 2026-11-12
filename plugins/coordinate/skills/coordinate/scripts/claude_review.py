@@ -8,8 +8,12 @@ The reviewer reads the brief on stdin (`--allowedTools` is variadic and would ea
 prompt), works in the worktree with read tools, Write for its findings file and read-only git
 (`Bash(rtk git:*)` too: the rtk hook rewrites `git`), and nothing else.
 
-Why not `Agent`: in auto mode, the context-mode hook rewrites every Agent prompt after the
-classifier checked it, so the classifier refuses the call (the second pilot's v2-perf, review-T87).
+Why not `Agent`: a hook that cuts tool output cuts it for an Agent subagent too. context-mode 2.x
+replaces any result over 4 KB with excerpts and a `ctx_search` line: a reviewer got about 12 lines
+of a 10 KB `git show` (checked on 2.1.9). This reviewer runs with context-mode off (SETTINGS) and
+reads whole diffs. The first reason was context-mode 1.x: its hook rewrote every Agent prompt
+after auto mode's classifier checked it, so the classifier refused the call (the second pilot's
+v2-perf, review-T87). 2.x leaves Agent alone, and auto mode accepts the call again.
 
 Ledger rows, under the brief's stem (`review-T87`, its own task, never the build's): LAUNCHED with
 <who> = the model (the close-out maps it to `sonnet_review` / `opus_review`), then EXITED with the
@@ -26,6 +30,7 @@ import status
 MODELS = ('sonnet', 'opus')
 TOOLS = ('Read,Grep,Glob,Write,WebFetch,Bash(git diff:*),Bash(git show:*),Bash(git log:*),'
          'Bash(git -C:*),Bash(rtk git:*)')
+SETTINGS = json.dumps({'enabledPlugins': {'context-mode@context-mode': False}})
 USAGE = ('input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens')
 MODEL_USAGE = ('inputTokens', 'outputTokens', 'cacheReadInputTokens', 'cacheCreationInputTokens')
 
@@ -77,7 +82,7 @@ def main():
     if os.path.exists(lf):
         lg.add(lf, stem, model, f'LAUNCHED {stem} via claude_review.py ({model}, claude -p); log {log}')
     cmd = ['claude', '-p', '--model', model, '--permission-mode', 'acceptEdits',
-           '--output-format', 'json', '--allowedTools', TOOLS]
+           '--output-format', 'json', '--settings', SETTINGS, '--allowedTools', TOOLS]
     with open(brief) as b, open(log, 'a') as L:
         r = subprocess.run(cmd, cwd=wt, stdin=b, stdout=subprocess.PIPE, stderr=L, text=True)
         L.write(r.stdout)

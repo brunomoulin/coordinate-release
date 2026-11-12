@@ -168,11 +168,12 @@ pick stays in `decisions.md` after its task merges. `ledger.py decisions <ledger
      OUTCOME row sums Claude tokens and ≈$ by that first word. With the
      coordinator-status mod loaded, add: "Report your plan and each finished step with the `step`
      tool", so the pane shows its progress.
-   - **Claude reviewer when `Agent` is refused** (Claude Code's auto permission mode: a hook that rewrites Agent prompts,
-     such as context-mode's, makes the classifier refuse every call):
+   - **Claude reviewer through `claude -p`** (when a hook cuts tool output: context-mode 2.x
+     leaves excerpts of any result over 4 KB, so an `Agent` reviewer reads a partial diff; or
+     when auto mode refuses `Agent` because a hook rewrote its prompt, as context-mode 1.x did):
      `python3 $S/claude_review.py <repo> --release R [--model sonnet|opus] <task>=<review brief>`
      with `run_in_background: true`. It runs `claude -p` in the worktree with read-only tools
-     and writes LAUNCHED and EXITED rows (with `claude_tokens=` / `claude_usd=`, which the
+     and context-mode off, and writes LAUNCHED and EXITED rows (with `claude_tokens=` / `claude_usd=`, which the
      OUTCOME row sums) itself, so skip step 5. It dies on `/exit`, like a bare `devin -p`.
    When the owner launches one themselves, give them the log path, then check it with `tail` on the log
    and `pgrep -af "devin -p"`.
